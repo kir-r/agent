@@ -1,9 +1,8 @@
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
-import org.jetbrains.kotlin.konan.target.HostManager
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.*
+import org.jetbrains.kotlin.gradle.tasks.*
+import org.jetbrains.kotlin.konan.target.*
 
 plugins {
     id("kotlin-multiplatform")
@@ -210,10 +209,7 @@ afterEvaluate {
         repositories {
             maven {
 
-                url =
-                    if (version.toString().endsWith("-SNAPSHOT"))
-                        uri("http://oss.jfrog.org/oss-snapshot-local")
-                    else uri("http://oss.jfrog.org/oss-release-local")
+                url = uri("http://oss.jfrog.org/oss-release-local")
                 credentials {
                     username =
                         if (project.hasProperty("bintrayUser"))
