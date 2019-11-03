@@ -1,9 +1,9 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import org.jetbrains.kotlin.konan.target.HostManager
+import com.github.jengelman.gradle.plugins.shadow.tasks.*
 
 plugins {
     id("kotlin-multiplatform")
@@ -15,7 +15,6 @@ plugins {
 val gccIsNeeded = (project.property("gccIsNeeded") as String).toBoolean()
 
 allprojects {
-    setupVersion()
 
     repositories {
         mavenCentral()
@@ -74,7 +73,7 @@ kotlin {
                 implementation(kotlin("stdlib"))
                 implementation(kotlin("reflect")) //TODO jarhell quick fix for kotlin jvm apps
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationRuntimeVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$jvmCoroutinesVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
                 implementation(project(":common"))
                 implementation(project(":plugin-api:drill-agent-part"))
                 implementation("com.alibaba:transmittable-thread-local:2.11.0")
@@ -103,7 +102,7 @@ kotlin {
 
         named("nativeAgentMain") {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:$serializationNativeVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:$serializationRuntimeVersion")
                 implementation("io.ktor:ktor-utils-native:$ktorUtilVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-io-native:$kotlinxIoVersion")
                 implementation("com.epam.drill:jvmapi-native:$drillJvmApiLibVerison")
@@ -129,7 +128,6 @@ tasks {
         mergeServiceFiles()
         isZip64 = true
         relocate("kotlin", "kruntime")
-//        relocate("kotlinx", "mykotlinx")
         archiveFileName.set("drillRuntime.jar")
         from(javaAgentJar)
     }

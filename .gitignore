@@ -1,7 +1,0 @@
-/build/
-/.idea/
-/.gradle/
-/*/.gradle/
-/*/build/
-/buildSrc/build/
-/buildSrc/.gradle/.gradle\
