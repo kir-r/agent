@@ -23,12 +23,7 @@ allprojects {
         maven(url = "https://dl.bintray.com/kotlin/ktor/")
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
     }
-    tasks.withType<KotlinCompile> {
-        kotlinOptions.allWarningsAsErrors = true
-    }
-    tasks.withType<KotlinNativeCompile> {
-        kotlinOptions.allWarningsAsErrors = true
-    }
+
 }
 
 val libName = "drill-agent"
