@@ -10,6 +10,6 @@ import org.springframework.stereotype.Component;
 @Component
 class DrillExtension {
     public DrillExtension() {
-        System.out.println("init");
+        System.out.println("initkik");
     }
 }

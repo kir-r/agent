@@ -37,21 +37,25 @@ fun sendMessage(message: String) {
     }
 }
 
+const val DELAY = 3000L
 
-fun startWs() =
+fun startWs() {
+    wsLogger.debug { "Starting WS" }
+
     wsThread.executeCoroutines {
         launch { topicRegister() }
         while (true) {
-            delay(3000)
+            delay(DELAY)
             try {
                 runBlocking {
                     websocket(exec { adminAddress.toString() })
                 }
             } catch (ex: Exception) {
-                println(ex.message + "\ntry reconnect\n")
+                wsLogger.error { "Starting WS handle with exception '${ex.message}', try to reconnect" }
             }
         }
     }
+}
 
 
 suspend fun websocket(adminUrl: String) {
