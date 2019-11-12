@@ -12,10 +12,11 @@ fun performAgentInitialization(initialParams: Map<String, String>) {
     val adminAddress = initialParams.getValue("adminAddress")
     val agentId = initialParams.getValue("agentId")
     val buildVersion = initialParams["buildVersion"] ?: ""
+    val serviceGroupId = initialParams["serviceGroupId"] ?: ""
     val drillInstallationDir = initialParams.getValue("drillInstallationDir")
     exec {
         this.drillInstallationDir = drillInstallationDir
-        this.agentConfig = AgentConfig(agentId, buildVersion)
+        this.agentConfig = AgentConfig(agentId, buildVersion, serviceGroupId)
         this.adminAddress = URL("ws://$adminAddress")
     }
 }

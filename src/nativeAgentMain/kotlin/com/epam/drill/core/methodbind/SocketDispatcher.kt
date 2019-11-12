@@ -109,13 +109,16 @@ fun write(address: DirectBufferAddress, len: jint, block: (DirectBufferAddress, 
             val adminUrl = if (::secureAdminAddress.isInitialized) {
                 secureAdminAddress.toUrlString(false)
             } else adminAddress.toUrlString(false)
-            "\ndrill-agent-id: ${agentConfig.id}\ndrill-admin-url: $adminUrl\ndrill-session-id: ${sessionId
-                ?: "empty"}"
+            "\n" +
+                    "drill-agent-id: ${if (agentConfig.serviceGroupId.isEmpty()) agentConfig.id else agentConfig.serviceGroupId}\n" +
+                    "drill-admin-url: $adminUrl\n" +
+                    "drill-session-id: ${sessionId ?: "empty"}"
         }
         val contentBodyBytes = address.toPointer().toKStringFromUtf8()
         if (contentBodyBytes.contains("text/html")
             || contentBodyBytes.contains("application/json")
-            || contentBodyBytes.contains("text/plain")) {
+            || contentBodyBytes.contains("text/plain")
+        ) {
             val replaceFirst = contentBodyBytes.replaceFirst("\n", "$spyHeaders\n")
             val toUtf8Bytes = replaceFirst.toUtf8Bytes()
             val refTo = toUtf8Bytes.refTo(0)
