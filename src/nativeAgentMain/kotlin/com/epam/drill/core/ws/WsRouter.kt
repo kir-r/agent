@@ -133,19 +133,6 @@ fun topicRegister() =
                 topicLogger.warn { "Plugin ${config.id} not loaded to agent" }
         }
 
-        topic("/plugins/resetPlugin").withGenericTopic(PluginId.serializer()) { (pluginId) ->
-            topicLogger.warn { "Resetting plugin with id $pluginId " }
-            val agentPluginPart = PluginManager[pluginId]
-            if (agentPluginPart != null) {
-                agentPluginPart.setEnabled(false)
-                agentPluginPart.off()
-                agentPluginPart.setEnabled(true)
-                agentPluginPart.on()
-                topicLogger.warn { "Plugin with id $pluginId has been reset" }
-            } else
-                topicLogger.warn { "Plugin with id $pluginId not loaded to agent" }
-        }
-
         topic("/plugins/action").withGenericTopic(PluginAction.serializer()) { m ->
             topicLogger.warn { "actionPluign event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
@@ -153,14 +140,16 @@ fun topicRegister() =
 
         }
 
-        topic("/plugins/togglePlugin").rawMessage { pluginId ->
-            topicLogger.warn { "togglePlugin event: PluginId is $pluginId" }
+        topic("/plugins/togglePlugin").withGenericTopic(TogglePayload.serializer()) { (pluginId, forceValue) ->
             val agentPluginPart = PluginManager[pluginId]
-            if (agentPluginPart != null)
-                agentPluginPart.setEnabled(!agentPluginPart.isEnabled())
-            else
+            if (agentPluginPart == null) {
                 topicLogger.warn { "Plugin $pluginId not loaded to agent" }
-
+            } else {
+                topicLogger.warn { "togglePlugin event: PluginId is $pluginId" }
+                val newValue = forceValue ?: !agentPluginPart.isEnabled()
+                agentPluginPart.setEnabled(newValue)
+                if (newValue) agentPluginPart.on() else agentPluginPart.off()
+            }
         }
 
         topic("agent/toggleStandBy").rawMessage {
