@@ -38,7 +38,14 @@ private fun runAgent(options: String?) {
         }.freeze())
 
         printAllowedCapabilities()
-        AddCapabilities(GetPotentialCapabilities())
+        memScoped {
+            val alloc = alloc<jvmtiCapabilities>()
+            alloc.can_retransform_classes = 1.toUInt()
+            alloc.can_retransform_any_class = 1.toUInt()
+            alloc.can_generate_native_method_bind_events = 1.toUInt()
+            AddCapabilities(alloc.ptr)
+        }
+//        AddCapabilities(GetPotentialCapabilities())
         AddToBootstrapClassLoaderSearch("$drillInstallationDir/drillRuntime.jar")
         SetNativeMethodPrefix("xxx_")
         callbackRegister()
