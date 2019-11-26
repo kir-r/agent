@@ -97,11 +97,10 @@ kotlin {
         named("nativeAgentMain") {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-native:$serializationRuntimeVersion")
-                implementation("io.ktor:ktor-utils-native:$ktorUtilVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-io-native:$kotlinxIoVersion")
                 implementation("com.epam.drill:jvmapi-native:$drillJvmApiLibVerison")
                 implementation(project(":plugin-api:drill-agent-part"))
                 implementation(project(":common"))
+                implementation(project(":agent:core"))
                 implementation(project(":agent:util"))
             }
         }
