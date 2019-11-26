@@ -19,7 +19,7 @@ application {
         else -> Pair("", "dll")
     }
     val drillDistrDir =
-        project(":agent").buildDir.resolve("install").resolve(if (isDevMode) "nativeAgent" else target).absolutePath
+        project(":agent:java").buildDir.resolve("install").resolve(if (isDevMode) "nativeAgent" else target).absolutePath
     val agentPath = "${file("$drillDistrDir/${pref}drill_agent.$ex")}"
     applicationDefaultJvmArgs = listOf(
         "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007",
@@ -41,8 +41,8 @@ dependencies {
 tasks {
     named("run") {
         if (isDevMode)
-            dependsOn(rootProject.tasks.getByPath(":agent:installNativeAgentDist"))
+            dependsOn(rootProject.tasks.getByPath(":agent:java:installNativeAgentDist"))
         else
-            dependsOn(rootProject.tasks.getByPath(":agent:install${target.capitalize()}Dist"))
+            dependsOn(rootProject.tasks.getByPath(":agent:java:install${target.capitalize()}Dist"))
     }
 }
