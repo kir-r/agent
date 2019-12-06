@@ -27,8 +27,13 @@ kotlin {
         val commonNativeMain: KotlinSourceSet = maybeCreate("commonNativeMain")
         with(commonNativeMain) {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-io-native:$kotlinxIoVersion")
-                implementation("io.ktor:ktor-utils-native:$ktorUtilVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-io-native:$kotlinxIoVersion") {
+                    exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-core-common")
+                }
+                implementation("io.ktor:ktor-utils-native:$ktorUtilVersion"){
+                    exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-core-common")
+                    exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-core-native")
+                }
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
                 implementation(project(":agent:util"))
                 implementation(project(":plugin-api:drill-agent-part"))
