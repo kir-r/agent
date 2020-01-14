@@ -1,30 +1,20 @@
 package com.epam.drill.ws
 
-import com.epam.drill.lang.UTF8
-import com.epam.drill.lang.toByteArray
-import com.epam.drill.lang.toString
-import com.epam.drill.net.AsyncClient
-import com.epam.drill.common.ws.URL
+import com.epam.drill.common.ws.*
+import com.epam.drill.lang.*
+import com.epam.drill.net.*
 import com.epam.drill.stream.*
-import com.epam.drill.util.encoding.toBase64
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
-import kotlin.random.Random
+import com.epam.drill.util.encoding.*
+import kotlinx.coroutines.*
+import kotlin.coroutines.*
 
-
-fun Int.mask(): Int = (1 shl this) - 1
-
-inline fun <T> buildList(callback: ArrayList<T>.() -> Unit): List<T> = arrayListOf<T>().apply(callback)
 
 suspend fun RWebsocketClient(
     url: String,
-    protocols: List<String>?,
-    origin: String?,
-    wskey: String?,
-    params: Map<String, String>
+    protocols: List<String>? = emptyList(),
+    origin: String? = "",
+    wskey: String? = "",
+    params: Map<String, String> = emptyMap()
 ): WebSocketClient {
     val uri = URL(url)
     val secure = when (uri.scheme) {
@@ -49,43 +39,6 @@ suspend fun RWebsocketClient(
     }
 }
 
-class WsFrame(val data: ByteArray, val type: WsOpcode, val isFinal: Boolean = true, val frameIsBinary: Boolean = true) {
-    fun toByteArray(): ByteArray = MemorySyncStreamToByteArray {
-        val isMasked = false
-        val mask = Random.nextBytes(4)
-        val sizeMask = (0x00)
-
-        write8(type.id or (if (isFinal) 0x80 else 0x00))
-
-        when {
-            data.size < 126 -> write8(data.size or sizeMask)
-            data.size < 65536 -> {
-                write8(126 or sizeMask)
-                write16BE(data.size)
-            }
-            else -> {
-                write8(127 or sizeMask)
-                write32BE(0)
-                write32BE(data.size)
-            }
-        }
-
-        if (isMasked) writeBytes(mask)
-
-        writeBytes(if (isMasked) applyMask(data, mask) else data)
-    }
-
-    companion object {
-        fun applyMask(payload: ByteArray, mask: ByteArray?): ByteArray {
-            if (mask == null) return payload
-            val maskedPayload = ByteArray(payload.size)
-            for (n in 0 until payload.size) maskedPayload[n] =
-                (payload[n].toInt() xor mask[n % mask.size].toInt()).toByte()
-            return maskedPayload
-        }
-    }
-}
-
 class RawSocketWebSocketClient(
     override val coroutineContext: CoroutineContext,
     val client: AsyncClient,
@@ -95,7 +48,6 @@ class RawSocketWebSocketClient(
     val key: String,
     val param: Map<String, String> = mutableMapOf()
 ) : WebSocketClient(url.fullUrl, protocols), CoroutineScope {
-    private var frameIsBinary = false
     val host = url.host ?: "127.0.0.1"
     val port = url.port
     val path = url.path
@@ -143,7 +95,7 @@ class RawSocketWebSocketClient(
                 launch {
                     try {
                         while (!closed) {
-                            sendWsFrame(
+                            client.sendWsFrame(
                                 WsFrame(
                                     "".toByteArray(),
                                     WsOpcode.Ping
@@ -157,13 +109,10 @@ class RawSocketWebSocketClient(
 
                 }
 
-
-
-
                 loop@ while (!closed) {
-                    val frame = readWsFrame()
+                    val frame = client.readWsFrame()
                     @Suppress("IMPLICIT_CAST_TO_ANY") val payload =
-                        if (frame.frameIsBinary) frame.data else frame.data.toString(UTF8)
+                        if (frame.frameIsBinary) frame.data else frame.data.decodeToString()
 
 
                     when (frame.type) {
@@ -171,7 +120,7 @@ class RawSocketWebSocketClient(
                             break@loop
                         }
                         WsOpcode.Ping -> {
-                            sendWsFrame(WsFrame(frame.data, WsOpcode.Pong))
+                            client.sendWsFrame(WsFrame(frame.data, WsOpcode.Pong))
                         }
                         WsOpcode.Pong -> {
                             //todo
@@ -195,95 +144,27 @@ class RawSocketWebSocketClient(
 
     }
 
-    private var lastPong: Long=0
+    private var lastPong: Long = 0
 
     var closed = false
 
     override fun close(code: Int, reason: String) {
         closed = true
         launch {
-            sendWsFrame(WsFrame(byteArrayOf(), WsOpcode.Close))
+            client.sendWsFrame(WsFrame(byteArrayOf(), WsOpcode.Close))
         }
     }
 
     override suspend fun send(message: String) {
-        sendWsFrame(
+        client.sendWsFrame(
             WsFrame(
-                message.toByteArray(UTF8),
+                message.encodeToByteArray(),
                 WsOpcode.Text
             )
         )
     }
 
     override suspend fun send(message: ByteArray) {
-        sendWsFrame(WsFrame(message, WsOpcode.Binary))
-    }
-
-    suspend fun readWsFrame(): WsFrame {
-        val b0 = client.readU8()
-        val b1 = client.readU8()
-
-        val isFinal = b0.extract(7)
-        val opcode = WsOpcode(b0.extract(0, 4))
-        val frameIsBinary = when (opcode) {
-            WsOpcode.Text -> false
-            WsOpcode.Binary -> true
-            else -> frameIsBinary
-        }
-
-        val partialLength = b1.extract(0, 7)
-        val isMasked = b1.extract(7)
-
-        val length = when (partialLength) {
-            126 -> client.readU16BE()
-            127 -> {
-                val tmp = client.readS32BE()
-                if (tmp != 0) error("message too long")
-                client.readS32BE()
-            }
-            else -> partialLength
-        }
-        val mask = if (isMasked) client.readBytesExact(4) else null
-        val unmaskedData = readExactBytes(length)
-        val finalData = WsFrame.applyMask(unmaskedData!!, mask)
-        return WsFrame(finalData, opcode, isFinal, frameIsBinary)
-    }
-
-
-    private suspend fun readExactBytes(length: Int): ByteArray? {
-        var byteArray: ByteArray?
-        client.apply {
-            byteArray = ByteArray(length)
-
-            var remaining = length
-            var coffset = 0
-            val reader = this
-            while (remaining > 0) {
-                val read = reader.read(byteArray!!, coffset, remaining)
-                if (read < 0) break
-                //		if (read == 0) throw EOFException("Not enough data. Expected=$len, Read=${len - remaining}, Remaining=$remaining")
-                coffset += read
-                remaining -= read
-            }
-        }
-        return byteArray
-    }
-
-    suspend fun sendWsFrame(frame: WsFrame) {
-        client.writeBytes(frame.toByteArray())
+        client.sendWsFrame(WsFrame(message, WsOpcode.Binary))
     }
 }
-
-inline class WsOpcode(val id: Int) {
-
-    companion object {
-        val Text = WsOpcode(0x01)
-        val Binary = WsOpcode(0x02)
-        val Close = WsOpcode(0x08)
-        val Ping = WsOpcode(0x09)
-        val Pong = WsOpcode(0x0A)
-    }
-}
-
-fun Int.extract(offset: Int, count: Int): Int = (this ushr offset) and count.mask()
-fun Int.extract(offset: Int): Boolean = ((this ushr offset) and 1) != 0

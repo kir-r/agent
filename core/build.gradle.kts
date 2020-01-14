@@ -1,5 +1,5 @@
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     id("kotlin-multiplatform")
@@ -50,5 +50,6 @@ kotlin {
 
 tasks.withType<KotlinNativeCompile> {
     kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
+    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.io.core.ExperimentalIoApi"
     kotlinOptions.freeCompilerArgs += "-XXLanguage:+InlineClasses"
 }

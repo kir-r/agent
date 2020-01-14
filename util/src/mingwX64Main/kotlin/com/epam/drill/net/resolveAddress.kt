@@ -2,6 +2,7 @@ package com.epam.drill.net
 
 import kotlinx.cinterop.*
 import platform.posix.*
+import com.epam.drill.internal.socket.socket_get_error
 import platform.windows.LPADDRINFOVar
 
 fun resolveAddress(host: String, port: Int) = memScoped {
@@ -32,17 +33,17 @@ fun close(sockRaw: ULong) {
     closesocket(sockRaw)
 }
 
-fun setSocketNonBlocking(sockRaw: ULong) {
-    memScoped {
-        val mode = alloc<u_longVar>()
-        mode.value = 1.convert()
-        (ioctlsocket(sockRaw, FIONBIO.convert(), mode.ptr) == 0)
-    }
+fun setSocketNonBlocking(sockRaw: ULong) = memScoped {
+    val mode = alloc<u_longVar>()
+    mode.value = 1.convert()
+    (ioctlsocket(sockRaw, FIONBIO.convert(), mode.ptr) == 0)
 }
 
+fun isAllowedSocketError() = socket_get_error() == EAGAIN
+
 fun checkErrors(name: String) {
-    val error = platform.windows.WSAGetLastError()
+    val error = socket_get_error()
     if (error != 0) {
-        error("WSA error($name): $error")
+        error("error($name): $error")
     }
 }

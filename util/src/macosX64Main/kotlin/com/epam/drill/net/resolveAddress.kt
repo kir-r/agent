@@ -2,6 +2,7 @@
 
 package com.epam.drill.net
 
+import com.epam.drill.internal.socket.*
 import kotlinx.cinterop.*
 import platform.posix.*
 
@@ -71,6 +72,11 @@ fun setSocketNonBlocking(sockRaw: ULong) {
     fcntl(sockRaw.toInt(), F_SETFL, flags)
 }
 
-fun checkErrors(@Suppress("UNUSED_PARAMETER") name: String) {
-//    println("check the $name error")
+fun isAllowedSocketError() = socket_get_error() == EAGAIN || socket_get_error() == 316
+
+fun checkErrors(name: String) {
+    val error = socket_get_error()
+    if (error != 0) {
+        error("error($name): $error")
+    }
 }

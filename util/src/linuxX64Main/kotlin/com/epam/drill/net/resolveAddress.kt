@@ -2,6 +2,7 @@
 
 package com.epam.drill.net
 
+import com.epam.drill.internal.socket.socket_get_error
 import kotlinx.cinterop.*
 import platform.posix.*
 
@@ -44,7 +45,6 @@ fun resolveAddress(host: String, port: Int) = memScoped {
     val ip = IP.fromHost(host)
     val addr = allocArray<sockaddr_in>(1)
     addr.set(ip, port)
-    println(ip)
     @Suppress("UNCHECKED_CAST")
     addr as CValuesRef<sockaddr>
 
@@ -66,14 +66,17 @@ fun close(sockRaw: ULong) {
 }
 
 fun setSocketNonBlocking(sockRaw: ULong) {
-    println(sockRaw)
     var flags = fcntl(sockRaw.toInt(), F_GETFL, 0)
     if (flags == -1) return
     flags = (flags or O_NONBLOCK)
     fcntl(sockRaw.toInt(), F_SETFL, flags)
 }
 
-@Suppress("UNUSED_PARAMETER")
+fun isAllowedSocketError() = socket_get_error() == EAGAIN || socket_get_error() == 316
+
 fun checkErrors(name: String) {
-//    println("check the $name error")
+    val error = socket_get_error()
+    if (error != 0) {
+        error("error($name): $error")
+    }
 }

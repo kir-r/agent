@@ -3,7 +3,7 @@ package com.epam.drill.net
 
 
 object NativeAsyncSocketFactory : AsyncSocketFactory() {
-    class NativeAsyncClient(val socket: NativeSocket) : AsyncClient {
+    class NativeAsyncClient(val socket: NativeSocketClient) : AsyncClient {
         override fun disconnect() {
             socket.disconnect()
         }
@@ -12,7 +12,7 @@ object NativeAsyncSocketFactory : AsyncSocketFactory() {
             socket.connect(host, port)
         }
 
-        override val connected: Boolean get() = socket.connected
+        override val connected: Boolean get() = socket.isAlive()
 
         override suspend fun read(buffer: ByteArray, offset: Int, len: Int): Int {
             return socket.suspendRecvUpTo(buffer, offset, len)
@@ -29,7 +29,7 @@ object NativeAsyncSocketFactory : AsyncSocketFactory() {
 
 
     override suspend fun createClient(secure: Boolean): AsyncClient {
-        return NativeAsyncClient(NativeSocket())
+        return NativeAsyncClient(NativeSocketClient())
     }
 
 }

@@ -1,8 +1,6 @@
 package com.epam.drill.net
 
-import com.epam.drill.stream.AsyncCloseable
-import com.epam.drill.stream.AsyncInputStream
-import com.epam.drill.stream.AsyncOutputStream
+import com.epam.drill.stream.*
 
 abstract class AsyncSocketFactory {
     abstract suspend fun createClient(secure: Boolean = false): AsyncClient
@@ -11,15 +9,9 @@ abstract class AsyncSocketFactory {
 @SharedImmutable
 internal val asyncSocketFactory: AsyncSocketFactory = NativeAsyncSocketFactory
 
-interface AsyncClient : AsyncInputStream, AsyncOutputStream,
-    AsyncCloseable {
+interface AsyncClient : AsyncStream {
     suspend fun connect(host: String, port: Int)
-    val connected: Boolean
-    override suspend fun read(buffer: ByteArray, offset: Int, len: Int): Int
-    override suspend fun write(buffer: ByteArray, offset: Int, len: Int)
-    override suspend fun close()
     fun disconnect()
-
 
     companion object {
         suspend operator fun invoke(host: String, port: Int, secure: Boolean = false) =
@@ -32,4 +24,14 @@ interface AsyncClient : AsyncInputStream, AsyncOutputStream,
             return socket
         }
     }
+}
+
+interface AsyncStream : AsyncInputStream, AsyncOutputStream,
+    AsyncCloseable {
+
+    val connected: Boolean
+    override suspend fun read(buffer: ByteArray, offset: Int, len: Int): Int
+    override suspend fun write(buffer: ByteArray, offset: Int, len: Int)
+    override suspend fun close()
+
 }

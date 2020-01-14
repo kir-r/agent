@@ -2,60 +2,48 @@
 
 package com.epam.drill.net
 
-import kotlinx.cinterop.convert
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.refTo
-import kotlinx.coroutines.delay
-import kotlinx.io.internal.utils.KX_SOCKET
+import com.epam.drill.internal.socket.*
+import kotlinx.cinterop.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.*
+import kotlinx.io.internal.utils.*
 import platform.posix.*
+import kotlin.test.*
 
-class NativeSocket private constructor(@Suppress("RedundantSuspendModifier") private val sockfd: KX_SOCKET) {
+abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") val sockfd: KX_SOCKET) {
     companion object {
         init {
             init_sockets()
         }
-
-        operator fun invoke(): NativeSocket {
-            val socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-            return NativeSocket(socket)
-        }
-
-
     }
 
-
-    val connected get() = _connected
-
-    @Suppress("RemoveRedundantCallsOfConversionMethods")
-    fun connect(host: String, port: Int) {
-        memScoped {
-            val inetaddr = resolveAddress(host, port)
-            checkErrors("getaddrinfo")
-
-            @Suppress("RemoveRedundantCallsOfConversionMethods") val connected =
-                connect(sockfd, inetaddr, sockaddr_in.size.convert())
-            checkErrors("connect")
-            setNonBlocking()
-            if (connected != 0) {
-                _connected = false
-            }
-            _connected = true
-        }
-    }
+    abstract fun isAlive(): Boolean
+    abstract fun setIsAlive(isAlive: Boolean): Unit
 
     private val availableBytes
         get() = run {
-            if (!_connected) {
+            if (!isAlive()) {
                 error("closed")
             }
             getAvailableBytes(sockfd.toULong())
         }
-    private var _connected = false
 
     private fun recv(data: ByteArray, offset: Int = 0, count: Int = data.size - offset): Int {
-        val result = recv(sockfd, data.refTo(offset), count.convert(), 0)
-//        checkErrors("recv")
-        return result.toInt()
+        var attempts = 50
+        var result = 0
+        while (true) {
+            if (attempts-- <= 0)
+                fail("Too many attempts to send")
+            result += recv(sockfd, data.refTo(offset), count.convert(), 0).toInt()
+
+            if (result < 0) {
+                val error = socket_get_error()
+                if (error == EAGAIN) continue
+                fail("recv(): $error")
+            }
+            break
+        }
+        return result
     }
 
     fun tryRecv(data: ByteArray, offset: Int = 0, count: Int = data.size - offset): Int {
@@ -63,15 +51,32 @@ class NativeSocket private constructor(@Suppress("RedundantSuspendModifier") pri
         return recv(data, offset, count)
     }
 
-    fun send(data: ByteArray, offset: Int = 0, count: Int = data.size - offset) {
-        if (count <= 0) return
+    private val mt = Mutex()
 
+    suspend fun send(data: ByteArray, offset: Int = 0, count: Int = data.size - offset) {
+        if (count <= 0) return
+        var attempts = 100
+        var remaining = count
+        var coffset = offset
         memScoped {
-            val result = send(sockfd, data.refTo(offset), count.convert(), 0)
-            checkErrors("send")
-            if (result < count) {
-                _connected = false
-                error("Socket write error")
+            mt.withLock(this) {
+                while (remaining > 0) {
+                    if (attempts-- <= 0)
+                        fail("Too many attempts to send")
+                    val result = send(sockfd, data.refTo(coffset), remaining.convert(), 0).toInt()
+
+                    if (result > 0) {
+                        coffset += result
+                        remaining -= result
+                    }
+                    if (result < count) {
+                        if (isAllowedSocketError()) {
+                            delay(100)
+                            continue
+                        }
+                        fail("send(): ${socket_get_error()}")
+                    }
+                }
             }
         }
     }
@@ -79,16 +84,16 @@ class NativeSocket private constructor(@Suppress("RedundantSuspendModifier") pri
     @Suppress("RemoveRedundantQualifierName")
     fun close() {
         com.epam.drill.net.close(sockfd.toULong())
-        _connected = false
+        setIsAlive(false)
     }
 
-    private fun setNonBlocking() {
+    fun setNonBlocking() {
         setSocketNonBlocking(sockfd.toULong())
-
+        setup_buffer_size(sockfd)
     }
 
     fun disconnect() {
-        _connected = false
+        setIsAlive(false)
     }
 }
 
