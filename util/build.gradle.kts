@@ -15,7 +15,6 @@ kotlin {
             macosX64()
         }
     }
-    targets.filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>().forEach { it.compilations["main"].cinterops?.create("sockets") }
     sourceSets {
         val commonNativeMain: KotlinSourceSet by creating {
             dependencies {
