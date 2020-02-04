@@ -19,7 +19,7 @@ kotlin {
         val commonNativeMain: KotlinSourceSet by creating {
             dependencies {
                 implementation("com.epam.drill:jvmapi-native:$drillJvmApiLibVersion")
-                implementation(project(":plugin-api:drill-agent-part"))
+                implementation("com.epam.drill:drill-agent-part-native:$drillApiVersion")
             }
         }
         if (isDevMode) {
@@ -37,5 +37,4 @@ kotlin {
 
 tasks.withType<KotlinNativeCompile> {
     kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    kotlinOptions.freeCompilerArgs += "-XXLanguage:+InlineClasses"
 }

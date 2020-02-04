@@ -1,0 +1,7 @@
+rootProject.name = "agent"
+include("core")
+include("dotnet")
+include("java")
+include("java:proxy-agent")
+include("java:pt-runner")
+include("util")
