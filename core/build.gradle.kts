@@ -35,8 +35,8 @@ kotlin {
                     exclude("org.jetbrains.kotlinx", "kotlinx-coroutines-core-native")
                 }
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
-                implementation(project(":agent:util"))
-                implementation(project(":plugin-api:drill-agent-part"))
+                implementation(project(":util"))
+                implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
             }
         }
         if (!isDevMode) {
