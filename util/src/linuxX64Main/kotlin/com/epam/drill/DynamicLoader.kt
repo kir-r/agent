@@ -10,6 +10,7 @@ fun loadNativePlugin(
     path: String,
     sender: CPointer<CFunction<(pluginId: CPointer<ByteVar>, message: CPointer<ByteVar>) -> Unit>>
 ) = memScoped {
+
     var pluginInstance: NativePart<*>? = null
     val handle = dlopen(path, RTLD_LAZY)
     if (handle != null) {
