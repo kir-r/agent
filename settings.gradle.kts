@@ -1,5 +1,4 @@
 rootProject.name = "agent"
-include("core")
 include("dotnet")
 include("java")
 include("java:proxy-agent")

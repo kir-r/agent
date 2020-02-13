@@ -3,36 +3,25 @@ import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     id("kotlin-multiplatform")
+    id("com.epam.drill.cross-compilation")
 }
 
 kotlin {
-    targets {
-        if (isDevMode) {
-            currentTarget()
-        } else {
-            mingwX64()
-            linuxX64()
-            macosX64()
+    crossCompilation{
+        common{
+            defaultSourceSet{
+                dependencies {
+                    implementation("com.epam.drill:jvmapi-native:$drillJvmApiLibVersion")
+                    implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
+                }
+            }
         }
     }
-    sourceSets {
-        val commonNativeMain: KotlinSourceSet by creating {
-            dependencies {
-                implementation("com.epam.drill:jvmapi-native:$drillJvmApiLibVersion")
-                implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
-            }
-        }
-        if (isDevMode) {
-            with(getByName(preset + "Main")) {
-                dependsOn(commonNativeMain)
-            }
-        } else {
-            @Suppress("UNUSED_VARIABLE") val mingwX64Main by getting { dependsOn(commonNativeMain) }
-            @Suppress("UNUSED_VARIABLE") val linuxX64Main by getting { dependsOn(commonNativeMain) }
-            @Suppress("UNUSED_VARIABLE") val macosX64Main by getting { dependsOn(commonNativeMain) }
-        }
 
-    }
+    mingwX64()
+    linuxX64()
+    macosX64()
+
 }
 
 tasks.withType<KotlinNativeCompile> {
