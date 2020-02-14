@@ -44,13 +44,13 @@ fun topicRegister() =
                 } else {
                     val natPlugin = generateNativePluginPath(id)
 
-                    val loadNativePlugin = loadNativePlugin(
-                        id,
-                        natPlugin,
-                        staticCFunction(::sendNativeMessage)
-                    )
-                    loadNativePlugin?.initPlugin()
-                    loadNativePlugin?.on()
+                    val dynamicLibrary = injectDynamicLibrary(natPlugin) as CPointed?
+
+                    val loadedNativePlugin = nativePlugin(dynamicLibrary, id, staticCFunction(::sendNativeMessage))
+
+
+                    loadedNativePlugin?.initPlugin()
+                    loadedNativePlugin?.on()
                 }
                 topicLogger.info { "$id plugin loaded" }
 

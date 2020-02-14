@@ -42,8 +42,12 @@ kotlin {
                     implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
                     implementation("com.epam.drill:common:$drillApiVersion")
                     implementation("com.epam.drill.logger:logger:$drillLogger")
-                    implementation(project(":util"))
                 }
+            }
+        }
+        posix{
+            defaultSourceSet {
+                dependsOn(sourceSets.named("commonMain").get())
             }
         }
     }
@@ -51,6 +55,14 @@ kotlin {
     mingwX64()
     linuxX64()
     macosX64()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation("org.jetbrains.kotlin:kotlin-stdlib-common")
+            }
+        }
+    }
 
 }
 
