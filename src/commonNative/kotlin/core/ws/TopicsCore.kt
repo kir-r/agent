@@ -47,6 +47,12 @@ inline fun <reified TopicUrl : Any, reified Generic : Any> WsRouter.topic(noinli
 
 @Suppress("unused")
 inline fun <reified TopicUrl : Any> WsRouter.topic(noinline block: suspend (String) -> Unit) {
+    if (TopicUrl::class.serializer()
+            .descriptor
+            .annotations
+            .filterIsInstance<com.epam.drill.api.Topic>().isEmpty()
+    ) return
+
     val destination = TopicUrl::class.topicUrl()
     val infoTopic = InfoTopic(destination, block)
     mapper[destination] = infoTopic

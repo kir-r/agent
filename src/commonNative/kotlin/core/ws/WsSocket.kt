@@ -3,8 +3,8 @@ package com.epam.drill.core.ws
 import com.epam.drill.*
 import com.epam.drill.common.*
 import com.epam.drill.core.exceptions.*
-import com.epam.drill.crypto.*
 import com.epam.drill.transport.ws.*
+import com.soywiz.krypto.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
@@ -103,11 +103,11 @@ class WsSocket : CoroutineScope {
         }
 
         wsClient.onBinaryMessage.add { rawFile ->
-            val md5FileHash = rawFile.md5().toHexString()
-            wsLogger.info { "got '$md5FileHash' file to binary channel" }
-            val metadata = binaryTopicsStorage.keys.first { it.md5Hash == md5FileHash }
+            val checkSum = rawFile.sha1().toHexString()
+            wsLogger.info { "got '$checkSum' file to binary channel" }
+            val metadata = binaryTopicsStorage.keys.first { it.checkSum == checkSum }
             binaryTopicsStorage.remove(metadata)?.block?.invoke(metadata, rawFile) ?: run {
-                wsLogger.warn { "can't find corresponded config fo'$md5FileHash' hash" }
+                wsLogger.warn { "can't find corresponded config fo'$checkSum' hash" }
             }
             Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/agent/load"))
         }

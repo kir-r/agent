@@ -15,6 +15,7 @@ allprojects {
         maven(url = "https://dl.bintray.com/kotlin/kotlinx/")
         maven(url = "https://dl.bintray.com/kotlin/ktor/")
         maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
+        maven(url = "https://dl.bintray.com/korlibs/korlibs/")
     }
 
     apply(plugin = "com.epam.drill.version.plugin")
@@ -44,6 +45,7 @@ kotlin {
                     implementation("com.epam.drill:common:$drillApiVersion")
                     implementation("com.epam.drill.logger:logger:$drillLogger")
                     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
+                    implementation("com.soywiz.korlibs.krypto:krypto:$kryptoVersion")
                 }
             }
         }

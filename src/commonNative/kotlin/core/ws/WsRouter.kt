@@ -24,7 +24,7 @@ private val loader = Worker.start(true)
 
 fun topicRegister() =
     WsRouter {
-        topic<Communication.Agent.PluginLoadEvent>().withPluginTopic { pluginMeta, file ->
+        WsRouter.inners("/agent/load").withPluginTopic { pluginMeta, file ->
             if (exec { pstorage[pluginMeta.id] } != null) {
                 topicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
                 return@withPluginTopic
