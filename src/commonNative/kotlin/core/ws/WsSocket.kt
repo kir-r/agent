@@ -26,7 +26,11 @@ private val dispatcher = newSingleThreadContext("sender coroutine")
 
 private val attemptCounter = AtomicInt(0.freeze()).freeze()
 
-class WsSocket : CoroutineScope {
+class WsSocket(
+    val onBinaryMessage: (suspend (ByteArray) -> Unit)? = null,
+    val onStringMessage: (suspend (String) -> Unit)? = null,
+    val onAnyMessage: (suspend (Any) -> Unit)? = null
+) : CoroutineScope {
 
     override val coroutineContext: CoroutineContext = dispatcher + CoroutineExceptionHandler { _, ex ->
         wsLogger.error { "WS error: ${ex.message}" }
@@ -63,6 +67,9 @@ class WsSocket : CoroutineScope {
             wsLogger.debug { "Agent connected" }
         }
 
+        onBinaryMessage?.let { wsClient.onBinaryMessage.add(it) }
+        onStringMessage?.let { wsClient.onStringMessage.add(it) }
+        onAnyMessage?.let { wsClient.onAnyMessage.add(it) }
         wsClient.onAnyMessage.add {
             Sender.send(Message(MessageType.DEBUG, "", ""))
         }
