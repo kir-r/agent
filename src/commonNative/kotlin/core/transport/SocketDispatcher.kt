@@ -2,11 +2,9 @@ package com.epam.drill.core.transport
 
 import com.epam.drill.*
 import com.epam.drill.core.*
+import com.epam.drill.hook.io.tcp.*
 import com.epam.drill.interceptor.configureHttpInterceptor
-import com.epam.drill.interceptor.headersForInject
 import mu.*
-import com.epam.drill.interceptor.readHttpCallback
-import com.epam.drill.interceptor.writeHttpCallback
 import kotlin.native.SharedImmutable
 import kotlin.native.concurrent.*
 
@@ -16,7 +14,7 @@ val httpRequestLogger = KotlinLogging.logger("http requestLogger")
 
 fun configureHttp() {
     configureHttpInterceptor()
-    headersForInject.value = {
+    injectedHeaders.value = {
         val idHeaderPair = idHeaderPairFromConfig()
         val adminUrl = retrieveAdminUrl()
         val sessionId = drillSessionId()
@@ -27,11 +25,11 @@ fun configureHttp() {
             mapOf("drill-session-id" to sessionId)
         else emptyMap()
     }.freeze()
-    readHttpCallback.value = { bytes: ByteArray ->
+    readCallback.value = { bytes: ByteArray ->
         sessionStorage(bytes.decodeToString())
         httpRequestLogger.debug { "READ" }
     }.freeze()
-    writeHttpCallback.value = { _: ByteArray -> httpRequestLogger.debug { "WRITE" } }.freeze()
+    writeCallback.value = { _: ByteArray -> httpRequestLogger.debug { "WRITE" } }.freeze()
 
 }
 
