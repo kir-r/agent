@@ -10,7 +10,7 @@ repositories {
 }
 
 val kotlinVersion = "1.3.70"
-val drillPluginVersion = "0.15.1"
+val drillPluginVersion = "0.16.0"
 
 dependencies {
     implementation(kotlin("gradle-plugin", kotlinVersion))
