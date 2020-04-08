@@ -26,6 +26,7 @@ fun topicRegister() =
     WsRouter {
         WsRouter.inners("/agent/load").withPluginTopic { pluginMeta, file ->
             if (exec { pstorage[pluginMeta.id] } != null) {
+                pluginMeta.sendPluginLoaded()
                 topicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
                 return@withPluginTopic
             }
@@ -52,8 +53,8 @@ fun topicRegister() =
                     loadedNativePlugin?.initPlugin()
                     loadedNativePlugin?.on()
                 }
+                plugMessage.sendPluginLoaded()
                 topicLogger.info { "$id plugin loaded" }
-
             }
 
         }
@@ -135,6 +136,10 @@ fun topicRegister() =
             }
         }
     }
+
+private fun PluginMetadata.sendPluginLoaded() {
+    Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/agent/plugin/$id/loaded"))
+}
 
 private fun generateNativePluginPath(id: String): String {
     //fixme do generate Native path
