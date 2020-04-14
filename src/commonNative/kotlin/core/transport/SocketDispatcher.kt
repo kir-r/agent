@@ -17,16 +17,14 @@ fun configureHttp() {
     injectedHeaders.value = {
         val idHeaderPair = idHeaderPairFromConfig()
         val adminUrl = retrieveAdminUrl()
-        val sessionId = drillSessionId()
         mapOf(
             idHeaderPair,
             "drill-admin-url" to adminUrl
-        ) + if (sessionId != null)
-            mapOf("drill-session-id" to sessionId)
-        else emptyMap()
+        ) + (drillRequest()?.headers?.filterKeys { it.startsWith("drill") } ?: mapOf())
+
     }.freeze()
     readCallback.value = { bytes: ByteArray ->
-        sessionStorage(bytes.decodeToString())
+        sessionStorage(bytes.decodeToString(), null)
         httpRequestLogger.debug { "READ" }
     }.freeze()
     writeCallback.value = { _: ByteArray -> httpRequestLogger.debug { "WRITE" } }.freeze()
