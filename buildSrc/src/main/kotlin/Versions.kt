@@ -4,7 +4,7 @@ val coroutinesVersion = "1.3.5"
 
 val drillHttpInterceptorVersion = "1.1.2"
 
-val drillApiVersion = "0.5.0-30"
+val drillApiVersion = "0.5.0-31"
 
 val drillLogger = "0.1.2"
 
