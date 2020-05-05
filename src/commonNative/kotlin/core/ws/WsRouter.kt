@@ -96,7 +96,7 @@ fun topicRegister() =
         rawTopic("/agent/load-classes-data") {
             val rawClassFiles = getClassesByConfig()
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
-            rawClassFiles.chunked(150).forEach {
+            rawClassFiles.filter { it.isNotEmpty() }.chunked(150).forEach {
                 Sender.send(
                     Message(
                         MessageType.CLASSES_DATA,
