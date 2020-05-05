@@ -97,7 +97,7 @@ fun topicRegister() =
             val rawClassFiles = try {
                 getClassesByConfig()
             } catch (ignored: Exception) {
-                listOf()
+                listOf<ByteArray>()
             }
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
             rawClassFiles.filter { it.isNotEmpty() }.chunked(150).forEach {
