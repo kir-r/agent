@@ -94,16 +94,19 @@ fun topicRegister() =
             )
         }
         rawTopic("/agent/load-classes-data") {
-            val rawClassFiles = getClassesByConfig()
+            val rawClassFiles = try {
+                getClassesByConfig()
+            } catch (ignored: Exception) {
+                listOf()
+            }
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
-            rawClassFiles.chunked(150).forEach {
-                Sender.send(
-                    Message(
-                        MessageType.CLASSES_DATA,
-                        "",
-                        ProtoBuf.dump(ByteArrayListWrapper.serializer(), ByteArrayListWrapper(it))
-                    )
-                )
+            rawClassFiles.filter { it.isNotEmpty() }.chunked(150).forEach {
+                try {
+                    val data = ProtoBuf.dump(ByteArrayListWrapper.serializer(), ByteArrayListWrapper(it))
+                    Sender.send(Message(MessageType.CLASSES_DATA, "", data))
+                } catch (ignored: Exception) {
+                    tempTopicLogger.warn { "can't process class message" }
+                }
             }
             Sender.send(Message(MessageType.FINISH_CLASSES_TRANSFER, ""))
             tempTopicLogger.info { "Agent's application classes processing by config triggered" }
