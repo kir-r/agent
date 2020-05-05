@@ -1,7 +1,6 @@
 package com.epam.drill.core.ws
 
 import com.epam.drill.*
-import com.epam.drill.api.*
 import com.epam.drill.api.dto.*
 import com.epam.drill.common.*
 import com.epam.drill.common.serialization.*
@@ -19,7 +18,7 @@ import kotlin.collections.set
 import kotlin.native.concurrent.*
 
 @SharedImmutable
-private val topicLogger = KotlinLogging.logger("topicLogger")
+private val tempTopicLogger = KotlinLogging.logger("tempTopicLogger")
 
 @SharedImmutable
 private val loader = Worker.start(true)
@@ -29,7 +28,7 @@ fun topicRegister() =
         WsRouter.inners("/agent/load").withPluginTopic { pluginMeta, file ->
             if (exec { pstorage[pluginMeta.id] } != null) {
                 pluginMeta.sendPluginLoaded()
-                topicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
+                tempTopicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
                 return@withPluginTopic
             }
             val pluginId = pluginMeta.id
@@ -37,7 +36,7 @@ fun topicRegister() =
             loader.execute(
                 TransferMode.UNSAFE,
                 { pluginMeta to file }) { (plugMessage, file) ->
-                topicLogger.info { "try to load ${plugMessage.id} plugin" }
+                tempTopicLogger.info { "try to load ${plugMessage.id} plugin" }
                 val id = plugMessage.id
                 exec { agentConfig.needSync = false }
                 if (!plugMessage.isNative) runBlocking {
@@ -56,45 +55,45 @@ fun topicRegister() =
                     loadedNativePlugin?.on()
                 }
                 plugMessage.sendPluginLoaded()
-                topicLogger.info { "$id plugin loaded" }
+                tempTopicLogger.info { "$id plugin loaded" }
             }
 
         }
 
-        topic<Communication.Agent.UpdateLoggingConfigEvent, LoggingConfig> { lc ->
-            topicLogger.info { "Agent got a logging config: $lc" }
+        rawTopic<LoggingConfig>("/agent/logging/update-config") { lc ->
+            tempTopicLogger.info { "Agent got a logging config: $lc" }
             logConfig.value = LoggerConfig(lc.trace, lc.debug, lc.info, lc.warn).freeze()
         }
 
-        topic<Communication.Agent.UpdateConfigEvent, ServiceConfig> { sc ->
-            topicLogger.info { "Agent got a system config: $sc" }
+        rawTopic<ServiceConfig>("/agent/update-config") { sc ->
+            tempTopicLogger.info { "Agent got a system config: $sc" }
             exec { secureAdminAddress = adminAddress.copy(scheme = "https", defaultPort = sc.sslPort.toInt()) }
         }
 
-        topic<Communication.Agent.ChangeHeaderNameEvent> { headerName ->
-            topicLogger.info { "Agent got a new headerMapping: $headerName" }
+        rawTopic("/agent/change-header-name") { headerName ->
+            tempTopicLogger.info { "Agent got a new headerMapping: $headerName" }
             exec { requestPattern = if (headerName.isEmpty()) null else headerName }
         }
 
-        topic<Communication.Agent.SetPackagePrefixesEvent, PackagesPrefixes> { payload ->
+        rawTopic<PackagesPrefixes>("/agent/set-packages-prefixes") { payload ->
             setPackagesPrefixes(payload)
-            topicLogger.info { "Agent packages prefixes have been changed" }
+            tempTopicLogger.info { "Agent packages prefixes have been changed" }
         }
 
-        topic<Communication.Agent.PluginUnloadEvent> { pluginId ->
-            topicLogger.warn { "Unload event. Plugin id is $pluginId" }
+        rawTopic("/agent/unload") { pluginId ->
+            tempTopicLogger.warn { "Unload event. Plugin id is $pluginId" }
             PluginManager[pluginId]?.unload(UnloadReason.ACTION_FROM_ADMIN)
             println(
                 """
-                |________________________________________________________
-                |Physical Deletion is not implemented yet.
-                |We should unload all resource e.g. classes, jars, .so/.dll
-                |Try to create custom classLoader. After this full GC.
-                |________________________________________________________
-            """.trimMargin()
+                    |________________________________________________________
+                    |Physical Deletion is not implemented yet.
+                    |We should unload all resource e.g. classes, jars, .so/.dll
+                    |Try to create custom classLoader. After this full GC.
+                    |________________________________________________________
+                """.trimMargin()
             )
         }
-        topic<Communication.Agent.LoadClassesDataEvent> {
+        rawTopic("/agent/load-classes-data") {
             val rawClassFiles = getClassesByConfig()
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
             rawClassFiles.chunked(150).forEach {
@@ -107,11 +106,11 @@ fun topicRegister() =
                 )
             }
             Sender.send(Message(MessageType.FINISH_CLASSES_TRANSFER, ""))
-            topicLogger.info { "Agent's application classes processing by config triggered" }
+            tempTopicLogger.info { "Agent's application classes processing by config triggered" }
         }
 
-        topic<Communication.Plugin.UpdateConfigEvent, PluginConfig> { config ->
-            topicLogger.warn { "UpdatePluginConfig event: message is $config " }
+        rawTopic<PluginConfig>("/plugin/updatePluginConfig") { config ->
+            tempTopicLogger.warn { "UpdatePluginConfig event: message is $config " }
             val agentPluginPart = PluginManager[config.id]
             if (agentPluginPart != null) {
                 agentPluginPart.setEnabled(false)
@@ -120,24 +119,24 @@ fun topicRegister() =
                 agentPluginPart.np?.updateRawConfig(config)
                 agentPluginPart.setEnabled(true)
                 agentPluginPart.on()
-                topicLogger.warn { "New settings for ${config.id} saved to file" }
+                tempTopicLogger.warn { "New settings for ${config.id} saved to file" }
             } else
-                topicLogger.warn { "Plugin ${config.id} not loaded to agent" }
+                tempTopicLogger.warn { "Plugin ${config.id} not loaded to agent" }
         }
 
-        topic<Communication.Plugin.DispatchEvent, PluginAction> { m ->
-            topicLogger.warn { "actionPluign event: message is ${m.message} " }
+        rawTopic<PluginAction>("/plugin/action") { m ->
+            tempTopicLogger.warn { "actionPluign event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
             agentPluginPart?.doRawAction(m.message)
 
         }
 
-        topic<Communication.Plugin.ToggleEvent, TogglePayload> { (pluginId, forceValue) ->
+        rawTopic<TogglePayload>("/plugin/togglePlugin") { (pluginId, forceValue) ->
             val agentPluginPart = PluginManager[pluginId]
             if (agentPluginPart == null) {
-                topicLogger.warn { "Plugin $pluginId not loaded to agent" }
+                tempTopicLogger.warn { "Plugin $pluginId not loaded to agent" }
             } else {
-                topicLogger.warn { "togglePlugin event: PluginId is $pluginId" }
+                tempTopicLogger.warn { "togglePlugin event: PluginId is $pluginId" }
                 val newValue = forceValue ?: !agentPluginPart.isEnabled()
                 agentPluginPart.setEnabled(newValue)
                 if (newValue) agentPluginPart.on() else agentPluginPart.off()

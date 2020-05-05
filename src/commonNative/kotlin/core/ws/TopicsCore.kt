@@ -45,8 +45,19 @@ inline fun <reified TopicUrl : Any> WsRouter.topic(): WsRouter.inners {
 }
 
 @Suppress("unused")
+fun WsRouter.rawTopic(path: String): WsRouter.inners {
+    return WsRouter.inners(path)
+}
+
+@Suppress("unused")
 inline fun <reified TopicUrl : Any, reified Generic : Any> WsRouter.topic(noinline block: suspend (Generic) -> Unit) {
     val destination = TopicUrl::class.topicUrl()
+    val infoTopic = GenericTopic(destination, Generic::class.serializer(), block)
+    mapper[destination] = infoTopic
+}
+
+@Suppress("unused")
+inline fun <reified Generic : Any> WsRouter.rawTopic(destination:String, noinline block: suspend (Generic) -> Unit) {
     val infoTopic = GenericTopic(destination, Generic::class.serializer(), block)
     mapper[destination] = infoTopic
 }
@@ -60,6 +71,12 @@ inline fun <reified TopicUrl : Any> WsRouter.topic(noinline block: suspend (Stri
     ) return
 
     val destination = TopicUrl::class.topicUrl()
+    val infoTopic = InfoTopic(destination, block)
+    mapper[destination] = infoTopic
+}
+
+@Suppress("unused")
+fun WsRouter.rawTopic(destination:String, block: suspend (String) -> Unit) {
     val infoTopic = InfoTopic(destination, block)
     mapper[destination] = infoTopic
 }
