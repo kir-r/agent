@@ -45,7 +45,6 @@ kotlin {
                     implementation("com.epam.drill:common:$drillApiVersion")
                     implementation("com.epam.drill.logger:logger:$drillLogger")
                     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
-                    implementation("com.soywiz.korlibs.krypto:krypto:$kryptoVersion")
                 }
             }
         }
