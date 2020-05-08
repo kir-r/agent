@@ -3,6 +3,7 @@ package com.epam.drill.core.ws
 import com.epam.drill.*
 import com.epam.drill.common.*
 import com.epam.drill.core.exceptions.*
+import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.ws.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
@@ -28,12 +29,22 @@ class WsSocket(
     val onAnyMessage: (suspend (Any) -> Unit)? = null
 ) : CoroutineScope {
 
-    override val coroutineContext: CoroutineContext = dispatcher + CoroutineExceptionHandler { _, ex ->
-        wsLogger.error { "WS error: ${ex.message}" }
+    val fallback: CoroutineContext = CoroutineExceptionHandler { _, ex ->
+        when (ex) {
+            is WsException -> wsLogger.error { "WS error: ${ex.message}" }
+            is WsClosedException -> wsLogger.info { "WS closed" }
+            else -> {
+                wsLogger.error { "WS error: ${ex.message}"; };
+                ex.printStackTrace()
+            }
+        }
         wsLogger.debug { "try reconnect" }
         attemptCounter.increment()
-        connect(exec { adminAddress.toString() })
-    }
+        val adminUrl = exec { adminAddress.toString() }
+        connect(adminUrl)
+    } + SupervisorJob()
+
+    override val coroutineContext: CoroutineContext = dispatcher + fallback
 
     private val mainChannel = msChannel
 
@@ -41,11 +52,13 @@ class WsSocket(
         launch { topicRegister() }
     }
 
-    fun connect(adminUrl: String) = launch {
-        delay(((DELAY + attemptCounter.value * 1000)))
-        val url = "$adminUrl/agent/attach"
-        wsLogger.debug { "try to create websocket $url" }
-        process(url, mainChannel)
+    fun connect(adminUrl: String) = launch(fallback) {
+        supervisorScope {
+            delay(((DELAY + attemptCounter.value * 1000)))
+            val url = "$adminUrl/agent/attach"
+            wsLogger.debug { "try to create websocket $url" }
+            process(url, mainChannel)
+        }
     }
 
     private suspend fun process(url: String, msChannel: Channel<ByteArray>) {
@@ -60,7 +73,7 @@ class WsSocket(
             )
         )
         wsClient.onOpen += {
-            wsLogger.debug { "Agent connected" }
+            wsLogger.info { "Agent connected" }
         }
 
         onBinaryMessage?.let { wsClient.onBinaryMessage.add(it) }
@@ -107,7 +120,11 @@ class WsSocket(
         }
 
         wsClient.onError.add {
-            wsLogger.error { "WS error: ${it.message}" }
+            when (it) {
+                is WsException -> wsLogger.error { "WS error: ${it.message}" }
+                else -> wsLogger.error { "WS error: ${it.message}";it.printStackTrace() }
+            }
+
         }
         wsClient.onClose.add {
             wsLogger.info { "Websocket closed" }
@@ -115,9 +132,13 @@ class WsSocket(
             throw WsClosedException("")
         }
         attemptCounter.value = 0.freeze()
-        while (true) {
-            wsClient.send(msChannel.receive())
-            delay(10)
+        try {
+            while (true) {
+                wsClient.send(msChannel.receive())
+                delay(10)
+            }
+        } catch (ex: Throwable) {
+            wsClient.onError.forEach { it(ex) }
         }
     }
 
