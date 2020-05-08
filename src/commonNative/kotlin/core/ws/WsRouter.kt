@@ -100,7 +100,7 @@ fun topicRegister() =
                 listOf<ByteArray>()
             }
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
-            rawClassFiles.filter { it.isNotEmpty() }.chunked(150).forEach {
+            rawClassFiles.filter { it.isNotEmpty() }.chunked(50).forEach {
                 try {
                     val data = ProtoBuf.dump(ByteArrayListWrapper.serializer(), ByteArrayListWrapper(it))
                     Sender.send(Message(MessageType.CLASSES_DATA, "", data))
