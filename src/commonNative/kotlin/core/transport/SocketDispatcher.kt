@@ -8,10 +8,6 @@ import mu.*
 import kotlin.native.SharedImmutable
 import kotlin.native.concurrent.*
 
-@SharedImmutable
-val httpRequestLogger = KotlinLogging.logger("http requestLogger")
-
-
 fun configureHttp() {
     configureHttpInterceptor()
     injectedHeaders.value = {
@@ -20,14 +16,13 @@ fun configureHttp() {
         mapOf(
             idHeaderPair,
             "drill-admin-url" to adminUrl
-        ) + (drillRequest()?.headers?.filterKeys { it.startsWith("drill") } ?: mapOf())
+        ) + (drillRequest()?.headers?.filterKeys { it.startsWith("drill-") } ?: mapOf())
 
     }.freeze()
     readCallback.value = { bytes: ByteArray ->
         sessionStorage(bytes.decodeToString(), null)
-        httpRequestLogger.debug { "READ" }
     }.freeze()
-    writeCallback.value = { _: ByteArray -> httpRequestLogger.debug { "WRITE" } }.freeze()
+    writeCallback.value = { _: ByteArray -> }.freeze()
 
 }
 
@@ -45,6 +40,3 @@ private fun retrieveAdminUrl(): String {
         } else adminAddress.toUrlString(false)
     }.toString()
 }
-
-private fun generateId() =
-    exec { if (agentConfig.serviceGroupId.isEmpty()) agentConfig.id else agentConfig.serviceGroupId }
