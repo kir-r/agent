@@ -33,10 +33,7 @@ class WsSocket(
         when (ex) {
             is WsException -> wsLogger.error { "WS error: ${ex.message}" }
             is WsClosedException -> wsLogger.info { "WS closed" }
-            else -> {
-                wsLogger.error { "WS error: ${ex.message}"; };
-                ex.printStackTrace()
-            }
+            else -> wsLogger.error(ex) { "WS error: ${ex.message}"; };
         }
         wsLogger.debug { "try reconnect" }
         attemptCounter.increment()
@@ -122,7 +119,7 @@ class WsSocket(
         wsClient.onError.add {
             when (it) {
                 is WsException -> wsLogger.error { "WS error: ${it.message}" }
-                else -> wsLogger.error { "WS error: ${it.message}";it.printStackTrace() }
+                else -> wsLogger.error(it) { "WS error: ${it.message}" }
             }
 
         }
