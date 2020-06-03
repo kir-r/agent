@@ -6,7 +6,7 @@ import com.epam.drill.core.plugin.*
 import com.epam.drill.plugin.api.processing.*
 
 val storage: MutableMap<String, AgentPart<*, *>>
-    get() = exec { pstorage }
+    get() = pstorage
 
 
 fun AgentPart<*, *>.actualPluginConfig() = pluginConfigById(this.id)

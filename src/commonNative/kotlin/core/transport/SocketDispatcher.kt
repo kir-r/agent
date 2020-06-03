@@ -20,7 +20,7 @@ fun configureHttp() {
     }.freeze()
     readHeaders.value = { it: Map<ByteArray, ByteArray> ->
         val headers = it.entries.associate { it.key.decodeToString() to it.value.decodeToString() }
-        headers[exec { requestPattern }] ?: headers["drill-session-id"]?.let {
+        headers[requestPattern] ?: headers["drill-session-id"]?.let {
             val lDrillRequest = DrillRequest(it, headers)
             drillRequest = lDrillRequest
             sessionStorage(lDrillRequest)
@@ -31,20 +31,19 @@ fun configureHttp() {
 
 }
 
-private fun idHeaderPairFromConfig(): Pair<String, String> = exec {
+private fun idHeaderPairFromConfig(): Pair<String, String> =
     when (val groupId = agentConfig.serviceGroupId) {
         "" -> "drill-agent-id" to agentConfig.id
         else -> "drill-group-id" to groupId
     }
-}
+
 
 @ThreadLocal
 var drillRequest: DrillRequest? = null
 
 private fun retrieveAdminUrl(): String {
-    return exec {
-        if (::secureAdminAddress.isInitialized) {
-            secureAdminAddress.toUrlString(false)
-        } else adminAddress.toUrlString(false)
-    }.toString()
+    return if (secureAdminAddress != null) {
+        secureAdminAddress?.toUrlString(false).toString()
+    } else adminAddress?.toUrlString(false).toString()
+
 }
