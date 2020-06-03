@@ -1,30 +1,50 @@
 package com.epam.drill
 
+import co.touchlab.stately.collections.*
 import com.epam.drill.common.*
 import com.epam.drill.common.ws.*
 import com.epam.drill.plugin.api.processing.*
 import kotlin.native.concurrent.*
 
-class DI {
-    lateinit var adminAddress: URL
-    lateinit var secureAdminAddress: URL
-    lateinit var agentConfig: AgentConfig
-    lateinit var drillInstallationDir: String
-    var requestPattern: String? = null
+private val _requestPattern = AtomicReference<String?>(null).freeze()
+private val _drillInstallationDir = AtomicReference<String?>(null).freeze()
+private val _adminAddress = AtomicReference<URL?>(null).freeze()
+private val _secureAdminAddress = AtomicReference<URL?>(null).freeze()
+private val _agentConfig = AtomicReference<AgentConfig?>(null).freeze()
 
-    var pstorage: MutableMap<String, AgentPart<*, *>> = mutableMapOf()
-    val pl = mutableMapOf<String, PluginMetadata>()
 
-}
+var requestPattern: String?
+    get() = _requestPattern.value
+    set(value) {
+        _requestPattern.value = value.freeze()
+    }
 
-inline fun <reified T> exec(noinline what: DI.() -> T) = work.execute(TransferMode.UNSAFE, { what }) {
-    it(dsa)
-}.result
+var drillInstallationDir: String?
+    get() = _drillInstallationDir.value
+    set(value) {
+        _drillInstallationDir.value = value.freeze()
+    }
 
+var adminAddress: URL?
+    get() = _adminAddress.value
+    set(value) {
+        _adminAddress.value = value.freeze()
+    }
+
+var secureAdminAddress: URL?
+    get() = _secureAdminAddress.value
+    set(value) {
+        _secureAdminAddress.value = value.freeze()
+    }
+
+var agentConfig: AgentConfig
+    get() = _agentConfig.value!!
+    set(value) {
+        _agentConfig.value = value.freeze()
+    }
 
 @SharedImmutable
-val work = Worker.start(true)
+val pstorage = IsoMutableMap<String, AgentPart<*, *>>()
 
-@ThreadLocal
-val dsa = DI()
-
+@SharedImmutable
+val pl = IsoMutableMap<String, PluginMetadata>()

@@ -26,19 +26,19 @@ private val loader = Worker.start(true)
 fun topicRegister() =
     WsRouter {
         WsRouter.inners("/agent/load").withPluginTopic { pluginMeta, file ->
-            if (exec { pstorage[pluginMeta.id] } != null) {
+            if (pstorage[pluginMeta.id] != null) {
                 pluginMeta.sendPluginLoaded()
                 tempTopicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
                 return@withPluginTopic
             }
             val pluginId = pluginMeta.id
-            exec { pl[pluginId] = pluginMeta }
+            pl[pluginId] = pluginMeta
             loader.execute(
                 TransferMode.UNSAFE,
                 { pluginMeta to file }) { (plugMessage, file) ->
                 tempTopicLogger.info { "try to load ${plugMessage.id} plugin" }
                 val id = plugMessage.id
-                exec { agentConfig.needSync = false }
+                agentConfig = agentConfig.copy(needSync = false)
                 if (!plugMessage.isNative) runBlocking {
                     val path = generatePluginPath(id)
                     writeFileAsync(path, file)
@@ -67,12 +67,12 @@ fun topicRegister() =
 
         rawTopic<ServiceConfig>("/agent/update-config") { sc ->
             tempTopicLogger.info { "Agent got a system config: $sc" }
-            exec { secureAdminAddress = adminAddress.copy(scheme = "https", defaultPort = sc.sslPort.toInt()) }
+            secureAdminAddress = adminAddress?.copy(scheme = "https", defaultPort = sc.sslPort.toInt())
         }
 
         rawTopic("/agent/change-header-name") { headerName ->
             tempTopicLogger.info { "Agent got a new headerMapping: $headerName" }
-            exec { requestPattern = if (headerName.isEmpty()) null else headerName }
+            requestPattern = if (headerName.isEmpty()) null else headerName
         }
 
         rawTopic<PackagesPrefixes>("/agent/set-packages-prefixes") { payload ->
@@ -158,11 +158,11 @@ private fun generateNativePluginPath(id: String): String {
 
 private fun generatePluginPath(id: String): String {
     val ajar = "agent-part.jar"
-    val pluginsDir = "${if (tempPath.isEmpty()) exec { drillInstallationDir } else tempPath}/drill-plugins"
+    val pluginsDir = "${if (tempPath.isEmpty()) drillInstallationDir else tempPath}/drill-plugins"
     doMkdir(pluginsDir)
     var pluginDir = "$pluginsDir/$id"
     doMkdir(pluginDir)
-    pluginDir = "$pluginDir/${exec { agentConfig.id }}"
+    pluginDir = "$pluginDir/${agentConfig.id}"
     doMkdir(pluginDir)
     val path = "$pluginDir/$ajar"
     return path

@@ -37,7 +37,7 @@ class WsSocket(
         }
         wsLogger.debug { "try reconnect" }
         attemptCounter.increment()
-        val adminUrl = exec { adminAddress.toString() }
+        val adminUrl = adminAddress.toString()
         connect(adminUrl)
     } + SupervisorJob()
 
@@ -65,8 +65,8 @@ class WsSocket(
             origin = "",
             wskey = "",
             params = mutableMapOf(
-                AgentConfigParam to ProtoBuf.dumps(AgentConfig.serializer(), exec { agentConfig }),
-                NeedSyncParam to exec { agentConfig.needSync }.toString()
+                AgentConfigParam to ProtoBuf.dumps(AgentConfig.serializer(), agentConfig),
+                NeedSyncParam to agentConfig.needSync.toString()
             )
         )
         wsClient.onOpen += {
