@@ -18,12 +18,14 @@ fun configureHttp() {
         ) + (drillRequest()?.headers?.filterKeys { it.startsWith("drill-") } ?: mapOf())
 
     }.freeze()
-    readHeaders.value = { it: Map<ByteArray, ByteArray> ->
-        val headers = it.entries.associate { it.key.decodeToString() to it.value.decodeToString() }
-        headers[requestPattern] ?: headers["drill-session-id"]?.let {
-            val lDrillRequest = DrillRequest(it, headers)
-            drillRequest = lDrillRequest
-            sessionStorage(lDrillRequest)
+    readHeaders.value = { rawHeaders: Map<ByteArray, ByteArray> ->
+        val headers = rawHeaders.entries.associate { (k, v) ->
+            k.decodeToString().toLowerCase() to v.decodeToString()
+        }
+        val sessionId = headers[requestPattern] ?: headers["drill-session-id"]
+        sessionId?.let { DrillRequest(it, headers) }?.also {
+            drillRequest = it
+            sessionStorage(it)
         }
         Unit
     }.freeze()
