@@ -12,6 +12,7 @@ val defaultFun: suspend () -> List<ByteArray> = { listOf() }
 
 private val drillRequestCallback_ = AtomicReference<() -> DrillRequest?>({ null }.freeze()).freeze()
 private val sessionStorageCallback = AtomicReference({ _: DrillRequest -> Unit }.freeze()).freeze()
+private val closeSessionCallback = AtomicReference({ }.freeze()).freeze()
 private val loadPluginCallback = AtomicReference({ _: String, _: PluginMetadata -> Unit }.freeze()).freeze()
 private val getClassesByConfigCallback = AtomicReference(defaultFun.freeze()).freeze()
 private val setPackagesPrefixesCallback = AtomicReference({ _: PackagesPrefixes -> Unit }.freeze()).freeze()
@@ -28,6 +29,12 @@ var sessionStorage: (DrillRequest) -> Unit
     get() = sessionStorageCallback.value
     set(value) {
         sessionStorageCallback.value = value.freeze()
+    }
+
+var closeSession: () -> Unit
+    get() = closeSessionCallback.value
+    set(value) {
+        closeSessionCallback.value = value.freeze()
     }
 
 var loadPlugin: (String, PluginMetadata) -> Unit
