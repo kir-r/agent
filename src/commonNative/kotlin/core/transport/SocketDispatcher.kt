@@ -24,7 +24,7 @@ fun configureHttp() {
         }.apply {
             logger.debug { "Drill headers: ${filterKeys { it.startsWith("drill-") }}" }
         }
-        val sessionId = requestPattern ?: headers[requestPattern] ?: headers["drill-session-id"]
+        val sessionId = headers[requestPattern] ?: headers["drill-session-id"]
         sessionId?.let { DrillRequest(it, headers) }?.also {
             drillRequest = it
             sessionStorage(it)
