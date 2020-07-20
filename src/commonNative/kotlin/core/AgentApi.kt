@@ -8,7 +8,7 @@ import kotlin.native.concurrent.*
 
 typealias sendFun = CPointer<CFunction<(pluginId: CPointer<ByteVar>, content: CPointer<ByteVar>) -> Unit>>
 
-val defaultFun: suspend () -> List<ByteArray> = { listOf() }
+val defaultFun: suspend () -> ByteArray = { byteArrayOf() }
 
 private val drillRequestCallback_ = AtomicReference<() -> DrillRequest?>({ null }.freeze()).freeze()
 private val sessionStorageCallback = AtomicReference({ _: DrillRequest -> Unit }.freeze()).freeze()
@@ -43,7 +43,7 @@ var loadPlugin: (String, PluginMetadata) -> Unit
         loadPluginCallback.value = value.freeze()
     }
 
-var getClassesByConfig: suspend () -> List<ByteArray>
+var getClassesByConfig: suspend () -> ByteArray
     get() = getClassesByConfigCallback.value
     set(value) {
         getClassesByConfigCallback.value = value.freeze()

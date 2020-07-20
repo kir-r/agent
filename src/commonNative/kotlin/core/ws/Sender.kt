@@ -21,13 +21,18 @@ object Sender : CoroutineScope {
         GC.collect()
     }
 
-    inline fun <reified T : Any> send(message: T) = launch {
+    inline fun <reified T : Any> send(message: T) {
         val messageForSend = ProtoBuf.dump(T::class.serializer(), message)
         logger.trace { "Initial message size: ${messageForSend.size}" }
-        val compressed = Deflate.encode(messageForSend, nowrap = true)
+
+        val compressed = Deflate.encode(
+            input = messageForSend,
+            bufferSize = if (messageForSend.size > Deflate.CHUNK) messageForSend.size else Deflate.CHUNK,
+            nowrap = true
+        )
         logger.trace { "Compressed message size: ${compressed.size}" }
-        msChannel.send(compressed)
-        GC.collect()
+
+        addMessageToQueue(compressed)
     }
 
     override val coroutineContext: CoroutineContext = dispatcher

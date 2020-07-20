@@ -4,7 +4,7 @@ import kotlinx.cinterop.*
 import platform.zlib.*
 
 object Deflate {
-    private const val CHUNK = 1024
+    const val CHUNK = 1024
 
     fun decode(
         input: ByteArray,

@@ -3,7 +3,6 @@ package com.epam.drill.core.ws
 import com.epam.drill.*
 import com.epam.drill.api.dto.*
 import com.epam.drill.common.*
-import com.epam.drill.common.serialization.*
 import com.epam.drill.common.ws.*
 import com.epam.drill.core.*
 import com.epam.drill.core.messanger.*
@@ -13,7 +12,6 @@ import com.epam.drill.plugin.*
 import com.epam.drill.plugin.api.processing.*
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.protobuf.*
 import kotlin.collections.set
 import kotlin.native.concurrent.*
 
@@ -100,19 +98,12 @@ fun topicRegister() =
             )
         }
         rawTopic("/agent/load-classes-data") {
-            val rawClassFiles = try {
-                getClassesByConfig()
-            } catch (ignored: Exception) {
-                listOf<ByteArray>()
-            }
             Sender.send(Message(MessageType.START_CLASSES_TRANSFER, ""))
-            rawClassFiles.filter { it.isNotEmpty() }.chunked(50).forEach {
-                try {
-                    val data = ProtoBuf.dump(ByteArrayListWrapper.serializer(), ByteArrayListWrapper(it))
-                    Sender.send(Message(MessageType.CLASSES_DATA, "", data))
-                } catch (ignored: Exception) {
-                    tempTopicLogger.warn { "can't process class message" }
-                }
+            try {
+                val data = getClassesByConfig()
+                Sender.send(Message(MessageType.CLASSES_DATA, "", data))
+            } catch (ignored: Exception) {
+                tempTopicLogger.warn { "can't process class message" }
             }
             Sender.send(Message(MessageType.FINISH_CLASSES_TRANSFER, ""))
             tempTopicLogger.info { "Agent's application classes processing by config triggered" }

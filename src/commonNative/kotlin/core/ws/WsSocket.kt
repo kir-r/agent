@@ -7,11 +7,11 @@ import com.epam.drill.logger.*
 import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.ws.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
 import kotlin.coroutines.*
 import kotlin.native.concurrent.*
+import kotlin.time.*
 
 const val DELAY = 1000L
 
@@ -43,8 +43,6 @@ class WsSocket(
 
     override val coroutineContext: CoroutineContext = dispatcher + fallback
 
-    private val mainChannel = msChannel
-
     init {
         launch { topicRegister() }
     }
@@ -54,11 +52,11 @@ class WsSocket(
             delay(((DELAY + attemptCounter.value * 1000)))
             val url = "$adminUrl/agent/attach"
             wsLogger.debug { "try to create websocket $url" }
-            process(url, mainChannel)
+            process(url)
         }
     }
 
-    private suspend fun process(url: String, msChannel: Channel<ByteArray>) {
+    private suspend fun process(url: String) {
         val wsClient = RWebsocketClient(
             url = url,
             protocols = emptyList(),
@@ -89,11 +87,13 @@ class WsSocket(
                 when (topic) {
                     is PluginTopic -> {
                         val pluginMetadata = ProtoBuf.load(PluginBinary.serializer(), message.data)
-                        topic.block(pluginMetadata.meta, pluginMetadata.data)
+                        val duration = measureTime { topic.block(pluginMetadata.meta, pluginMetadata.data) }
+                        wsLogger.debug { "'$destination' took $duration" }
                         Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/agent/load"))
                     }
                     is InfoTopic -> {
-                        topic.run(message.data)
+                        val duration = measureTime { topic.run(message.data) }
+                        wsLogger.debug { "'$destination' took $duration" }
                         Sender.send(
                             Message(
                                 MessageType.MESSAGE_DELIVERED,
@@ -102,7 +102,8 @@ class WsSocket(
                         )
                     }
                     is GenericTopic<*> -> {
-                        topic.deserializeAndRun(message.data)
+                        val duration = measureTime { topic.deserializeAndRun(message.data) }
+                        wsLogger.debug { "'$destination' took $duration" }
                         Sender.send(
                             Message(
                                 MessageType.MESSAGE_DELIVERED,
@@ -132,7 +133,7 @@ class WsSocket(
         attemptCounter.value = 0.freeze()
         try {
             while (true) {
-                wsClient.send(msChannel.receive())
+                readMessage()?.let { wsClient.blockingSend(it) }
                 delay(10)
             }
         } catch (ex: Throwable) {
