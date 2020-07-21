@@ -1,9 +1,10 @@
 package com.epam.drill
 
-import co.touchlab.stately.collections.*
 import com.epam.drill.common.*
 import com.epam.drill.common.ws.*
 import com.epam.drill.plugin.api.processing.*
+import kotlinx.atomicfu.*
+import kotlinx.collections.immutable.*
 import kotlin.native.concurrent.*
 
 private val _requestPattern = AtomicReference<String?>(null).freeze()
@@ -44,7 +45,22 @@ var agentConfig: AgentConfig
     }
 
 @SharedImmutable
-val pstorage = IsoMutableMap<String, AgentPart<*, *>>()
+private val _pstorage = atomic(persistentHashMapOf<String, AgentPart<*, *>>())
+
+val pstorage
+    get() = _pstorage.value
+
+
+fun addPluginToStorage(plugin: AgentPart<*,*>) {
+    _pstorage.update { it + (plugin.id to plugin) }
+}
 
 @SharedImmutable
-val pl = IsoMutableMap<String, PluginMetadata>()
+private val _pl = atomic(persistentHashMapOf<String, PluginMetadata>())
+
+val pl
+    get() = _pl.value
+
+fun addPluginConfig(pluginMetadata: PluginMetadata) {
+    _pl.update { it + (pluginMetadata.id to pluginMetadata) }
+}

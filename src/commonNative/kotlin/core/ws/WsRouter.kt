@@ -12,7 +12,6 @@ import com.epam.drill.plugin.*
 import com.epam.drill.plugin.api.processing.*
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
-import kotlin.collections.set
 import kotlin.native.concurrent.*
 
 @SharedImmutable
@@ -29,8 +28,7 @@ fun topicRegister() =
                 tempTopicLogger.info { "Plugin '${pluginMeta.id}' is already loaded" }
                 return@withPluginTopic
             }
-            val pluginId = pluginMeta.id
-            pl[pluginId] = pluginMeta
+            addPluginConfig(pluginMeta)
             loader.execute(
                 TransferMode.UNSAFE,
                 { pluginMeta to file }) { (plugMessage, file) ->
