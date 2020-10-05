@@ -1,7 +1,7 @@
 package com.epam.drill.core.ws
 
 import com.epam.drill.logger.*
-import com.epam.drill.zlib.*
+import com.epam.drill.zstd.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
@@ -25,7 +25,7 @@ object Sender : CoroutineScope {
         val messageForSend = ProtoBuf.dump(T::class.serializer(), message)
         logger.trace { "Initial message size: ${messageForSend.size}" }
 
-        val compressed = Zstd.encode(input = messageForSend)
+        val compressed = Zstd.compress(input = messageForSend)
         logger.trace { "Compressed message size: ${compressed.size}" }
 
         addMessageToQueue(compressed)

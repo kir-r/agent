@@ -1,11 +1,11 @@
-package com.epam.drill.zlib
+package com.epam.drill.zstd
 
 import com.epam.drill.zstd.gen.*
 import kotlinx.cinterop.*
 
 object Zstd {
 
-    fun decode(input: ByteArray) = memScoped {
+    fun decompress(input: ByteArray) = memScoped {
         pinIO(input) { inp ->
             val initialSize = ZSTD_getFrameContentSize(inp, input.size.convert())
             ByteArray(initialSize.toInt()).apply {
@@ -16,7 +16,7 @@ object Zstd {
         }
     }
 
-    fun encode(input: ByteArray) = memScoped {
+    fun compress(input: ByteArray) = memScoped {
         val compressedSize = ZSTD_compressBound(input.size.convert())
         pinIO(input) { inp ->
             val output = ByteArray(compressedSize.toInt())
