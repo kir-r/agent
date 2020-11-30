@@ -28,7 +28,7 @@ object Sender : CoroutineScope {
         val compressed = Zstd.compress(input = messageForSend)
         logger.trace { "Compressed message size: ${compressed.size}" }
 
-        addMessageToQueue(compressed)
+        sendMessage(compressed)
     }
 
     override val coroutineContext: CoroutineContext = dispatcher

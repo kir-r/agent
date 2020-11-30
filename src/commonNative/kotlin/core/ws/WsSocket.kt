@@ -134,7 +134,7 @@ class WsSocket(
         try {
             while (true) {
                 readMessage()?.let { wsClient.blockingSend(it) }
-                delay(10)
+                delay(200)
             }
         } catch (ex: Throwable) {
             wsClient.onError.forEach { it(ex) }
