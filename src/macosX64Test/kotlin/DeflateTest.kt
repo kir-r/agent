@@ -1,5 +1,6 @@
 package com.epam.drill.zlib
 
+import com.epam.drill.zstd.*
 import kotlin.test.*
 
 class DeflateTest {
@@ -7,9 +8,9 @@ class DeflateTest {
     @Test
     fun shouldCompressAndDecompress() {
         val input = ByteArray(100)
-        val compressed = Zstd.encode(input)
+        val compressed = Zstd.compress(input)
         assertTrue { compressed.size < input.size }
-        val uncompressed = Zstd.decode(compressed)
+        val uncompressed = Zstd.decompress(compressed)
         assertEquals(input.contentHashCode(), uncompressed.contentHashCode())
     }
 
@@ -17,9 +18,9 @@ class DeflateTest {
     fun shouldCompressAndDecompressLargeContent() {
         val buffSize = 10000000 //~ 10 mb
         val input = ByteArray(buffSize)
-        val compressed = Zstd.encode(input)
+        val compressed = Zstd.compress(input)
         assertTrue { compressed.size < input.size }
-        val uncompressed = Zstd.decode(compressed)
+        val uncompressed = Zstd.decompress(compressed)
         assertEquals(input.contentHashCode(), uncompressed.contentHashCode())
     }
 
