@@ -1,9 +1,8 @@
 package com.epam.drill.core.messanger
 
 import com.epam.drill.common.*
-import com.epam.drill.core.*
-import com.epam.drill.core.plugin.dto.*
 import com.epam.drill.core.ws.*
+import com.epam.drill.plugin.api.message.*
 import kotlinx.cinterop.*
 
 fun sendNativeMessage(pluginId: CPointer<ByteVar>, content: CPointer<ByteVar>) {
@@ -13,11 +12,11 @@ fun sendNativeMessage(pluginId: CPointer<ByteVar>, content: CPointer<ByteVar>) {
 fun sendMessage(pluginId: String, content: String) {
     Sender.send(
         Message(
-            MessageType.PLUGIN_DATA,
-            "",
-            (MessageWrapper.serializer() stringify MessageWrapper(
+            type = MessageType.PLUGIN_DATA,
+            destination = "",
+            data = (MessageWrapper.serializer() stringify MessageWrapper(
                 pluginId,
-                DrillMessage(drillRequest()?.drillSessionId ?: "", content)
+                DrillMessage(content = content)
             )).encodeToByteArray()
         )
     )
