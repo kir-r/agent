@@ -82,6 +82,20 @@ fun topicRegister() =
             }
         }
 
+        rawTopic<UpdateInfo>("/agent/update-parameters") { info ->
+            val parameters = info.parameters
+            tempTopicLogger.debug { "Agent update config by $parameters" }
+            val newParameters = HashMap(agentConfig.parameters)
+            parameters.forEach { updateParameter ->
+                newParameters[updateParameter.key]?.let {
+                    newParameters[updateParameter.key] = it.copy(value = updateParameter.value)
+                } ?: tempTopicLogger.warn { "cannot find and update the parameter '$updateParameter'" }
+            }
+            agentConfig = agentConfig.copy(parameters = newParameters)
+            agentConfigUpdater.updateParameters(agentConfig)
+        }
+
+        //todo what is the use-case? change admin port when use https on admin?
         rawTopic<ServiceConfig>("/agent/update-config") { sc ->
             tempTopicLogger.info { "Agent got a system config: $sc" }
             secureAdminAddress = adminAddress?.copy(scheme = "https", defaultPort = sc.sslPort.toInt())
