@@ -21,11 +21,11 @@ import com.epam.drill.logger.*
 import com.epam.drill.transport.*
 import com.epam.drill.transport.common.ws.*
 import com.epam.drill.ws.*
+import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.protobuf.*
 import kotlin.coroutines.*
-import kotlin.native.concurrent.*
 import kotlin.time.*
 
 @SharedImmutable
@@ -37,6 +37,8 @@ private val dispatcher = newSingleThreadContext("sender coroutine")
 class WsSocket : CoroutineScope {
 
     override val coroutineContext: CoroutineContext = dispatcher
+
+    private val errorMessage = atomic("")
 
     init {
         topicRegister()
@@ -55,6 +57,7 @@ class WsSocket : CoroutineScope {
         ws.value = wsClient
         wsClient.onOpen {
             wsLogger.info { "Agent connected" }
+            errorMessage.update { "" }
         }
 
         wsClient.onBinaryMessage { rawMessage ->
@@ -97,11 +100,17 @@ class WsSocket : CoroutineScope {
             }
         }
 
-        wsClient.onError {
-            wsLogger.error { "WS error: $it" }
+        wsClient.onError { message ->
+            if (errorMessage.value != message) {
+                wsLogger.error { "[Duplicates in debug] WS error: $message" }
+                errorMessage.update { message }
+            } else {
+                wsLogger.debug { "WS error: $message" }
+            }
         }
         wsClient.onClose {
             wsLogger.info { "Websocket closed" }
+            errorMessage.update { "" }
         }
 
     }
