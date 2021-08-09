@@ -154,7 +154,6 @@ fun topicRegister() =
             tempTopicLogger.warn { "actionPluign event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
             agentPluginPart?.doRawAction(m.message)
-
         }
 
         rawTopic<TogglePayload>("/plugin/togglePlugin") { (pluginId, forceValue) ->
@@ -167,11 +166,16 @@ fun topicRegister() =
                 agentPluginPart.setEnabled(newValue)
                 if (newValue) agentPluginPart.on() else agentPluginPart.off()
             }
+            sendPluginToggle(pluginId)
         }
     }
 
 private fun PluginMetadata.sendPluginLoaded() {
     Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/agent/plugin/$id/loaded"))
+}
+
+private fun sendPluginToggle(pluginId: String) {
+    Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/agent/plugin/${pluginId}/toggle"))
 }
 
 private fun generateNativePluginPath(id: String): String {
