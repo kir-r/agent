@@ -137,7 +137,7 @@ fun topicRegister() =
         }
 
         rawTopic<PluginConfig>("/plugin/updatePluginConfig") { config ->
-            tempTopicLogger.warn { "UpdatePluginConfig event: message is $config " }
+            tempTopicLogger.info { "UpdatePluginConfig event: message is $config " }
             val agentPluginPart = PluginManager[config.id]
             if (agentPluginPart != null) {
                 agentPluginPart.setEnabled(false)
@@ -145,13 +145,13 @@ fun topicRegister() =
                 agentPluginPart.updateRawConfig(config.data)
                 agentPluginPart.setEnabled(true)
                 agentPluginPart.on()
-                tempTopicLogger.warn { "New settings for ${config.id} saved to file" }
+                tempTopicLogger.debug { "New settings for ${config.id} saved to file" }
             } else
                 tempTopicLogger.warn { "Plugin ${config.id} not loaded to agent" }
         }
 
         rawTopic<PluginAction>("/plugin/action") { m ->
-            tempTopicLogger.warn { "actionPluign event: message is ${m.message} " }
+            tempTopicLogger.debug { "actionPlugin event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
             agentPluginPart?.doRawAction(m.message)
         }
@@ -161,7 +161,7 @@ fun topicRegister() =
             if (agentPluginPart == null) {
                 tempTopicLogger.warn { "Plugin $pluginId not loaded to agent" }
             } else {
-                tempTopicLogger.warn { "togglePlugin event: PluginId is $pluginId" }
+                tempTopicLogger.info { "togglePlugin event: PluginId is $pluginId" }
                 val newValue = forceValue ?: !agentPluginPart.isEnabled()
                 agentPluginPart.setEnabled(newValue)
                 if (newValue) agentPluginPart.on() else agentPluginPart.off()
