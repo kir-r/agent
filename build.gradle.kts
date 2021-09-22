@@ -25,8 +25,8 @@ allprojects {
 
     repositories {
         mavenLocal()
+        mavenCentral()
         apply(from = "$scriptUrl/maven-repo.gradle.kts")
-        jcenter()
     }
 
     tasks.withType<KotlinCompile> {
