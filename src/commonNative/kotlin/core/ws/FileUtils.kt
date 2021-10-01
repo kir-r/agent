@@ -25,7 +25,11 @@ import kotlinx.coroutines.*
 import platform.posix.*
 import kotlin.coroutines.*
 import kotlin.math.*
+
 import kotlin.native.concurrent.*
+
+//TODO EPMDJ-8696
+expect suspend fun writeFileAsync(path: String, content: ByteArray): Long
 
 fun ByteArray.openAsync(): AsyncStream =
     MemoryAsyncStreamBase(this).toAsyncStream(0L)
@@ -64,21 +68,15 @@ class MemoryAsyncStreamBase(var data: ByteArray) : AsyncStreamBase() {
 
 fun AsyncStreamBase.toAsyncStream(position: Long = 0L): AsyncStream =
     AsyncStream(this, position)
+
 @SharedImmutable
-private val IOWorker = Worker.start()
+internal val IOWorker = Worker.start()
 
 internal suspend fun fileWrite(file: CPointer<FILE>, position: Long, buffer: ByteArray, offset: Int, len: Int) {
     if (len > 0) {
         fileWrite(file, position, buffer.copyOfRange(offset, offset + len))
     }
 }
-
-suspend fun writeFileAsync(path: String, content: ByteArray): Long {
-    return open(path, "w+b").use {
-        content.openAsync().copyTo(this)
-    }
-}
-
 
 suspend inline fun <T : AsyncCloseable, TR> T.use(callback: T.() -> TR): TR {
     var error: Throwable? = null
@@ -299,18 +297,6 @@ interface AsyncGetLengthStream : AsyncBaseStream {
 }
 
 
-internal suspend fun fileSetLength(file: String, length: Long) {
-    data class Info(val file: String, val length: Long)
-
-    return executeInWorker(
-        IOWorker,
-        Info(file, length)
-    ) { (fd, len) ->
-        truncate(fd, len.convert())
-        Unit
-    }
-}
-
 suspend fun <T, R> executeInWorker(worker: Worker, value: T, func: (T) -> R): R {
     class Info(val value: T, val func: (T) -> R)
 
@@ -342,18 +328,6 @@ internal suspend fun fileClose(file: CPointer<FILE>): Unit = executeInWorker(
     Unit
 }
 
-internal suspend fun fileLength(file: CPointer<FILE>): Long = executeInWorker(
-    IOWorker,
-    file
-) { fd ->
-    val prev = ftell(fd)
-    fseek(fd, 0L.convert(), SEEK_END)
-    val end = ftell(fd)
-    fseek(fd, prev.convert(), SEEK_SET)
-    end.toLong()
-}
-
-
 internal suspend fun fileOpen(name: String, mode: String): CPointer<FILE>? {
     data class Info(val name: String, val mode: String)
     return executeInWorker(
@@ -364,21 +338,9 @@ internal suspend fun fileOpen(name: String, mode: String): CPointer<FILE>? {
     }
 }
 
-internal suspend fun fileWrite(file: CPointer<FILE>, position: Long, data: ByteArray): Long {
-    data class Info(val file: CPointer<FILE>, val position: Long, val data: ByteArray)
-
-    if (data.isEmpty()) return 0L
-
-    return executeInWorker(
-        IOWorker,
-        Info(file, position, if (data.isFrozen) data else data.copyOf())
-    ) { (fd, position, data) ->
-        data.usePinned { pin ->
-            fseek(fd, position.convert(), SEEK_SET)
-            fwrite(pin.addressOf(0), 1.convert(), data.size.convert(), fd).toLong()
-        }.toLong()
-    }
-}
+expect suspend fun fileSetLength(file: String, length: Long)
+expect suspend fun fileLength(file: CPointer<FILE>): Long
+expect suspend fun fileWrite(file: CPointer<FILE>, position: Long, data: ByteArray): Long
 
 fun arraycopy(src: ByteArray, srcPos: Int, dst: ByteArray, dstPos: Int, size: Int): Unit =
     run { src.copyInto(dst, dstPos, srcPos, srcPos + size) }

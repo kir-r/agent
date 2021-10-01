@@ -24,6 +24,9 @@ import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.*
 import kotlin.native.concurrent.*
 
+@SharedImmutable
+private val logger = Logging.logger("Transport")
+
 fun configureHttp() {
     configureHttpInterceptor()
     injectedHeaders.value = {
@@ -37,7 +40,7 @@ fun configureHttp() {
     }.freeze()
     readHeaders.value = { rawHeaders: Map<ByteArray, ByteArray> ->
         val headers = rawHeaders.entries.associate { (k, v) ->
-            k.decodeToString().toLowerCase() to v.decodeToString()
+            k.decodeToString().lowercase() to v.decodeToString()
         }
         if (Logging.logLevel <= LogLevel.DEBUG) {
             val drillHeaders = headers.filterKeys { it.startsWith("drill-") }

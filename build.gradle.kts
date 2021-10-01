@@ -4,7 +4,6 @@ import java.net.*
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
-    id("com.epam.drill.cross-compilation")
     id("com.github.hierynomus.license")
     `maven-publish`
 }
@@ -37,68 +36,81 @@ allprojects {
 }
 
 kotlin {
+    targets {
+        setOf(
+            mingwX64 { binaries.all { linkerOpts("-lpsapi", "-lwsock32", "-lws2_32", "-lmswsock") } },
+            macosX64(),
+            linuxX64()
+        ).forEach {
+            it.compilations["main"].addCInterop()
+        }
+        jvm {
+            val main by compilations
+            main.defaultSourceSet {
+                dependencies {
+                    compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationRuntimeVersion")
+                }
+            }
+        }
+    }
 
     sourceSets {
-        commonMain {
+        listOf(
+            "kotlin.ExperimentalStdlibApi",
+            "kotlin.ExperimentalUnsignedTypes",
+            "kotlin.time.ExperimentalTime",
+            "kotlinx.serialization.ExperimentalSerializationApi",
+            "kotlinx.serialization.InternalSerializationApi",
+        ).let { annotations ->
+            all { annotations.forEach(languageSettings::optIn) }
+        }
+        val commonMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationRuntimeVersion")
                 implementation("com.epam.drill.logger:logger-api:$drillLoggerApiVersion")
             }
         }
-    }
-
-    crossCompilation {
-        common {
-            addCInterop()
-            defaultSourceSet {
-                dependsOn(sourceSets.named("commonMain").get())
-                dependencies {
-                    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$serializationRuntimeVersion")
-                    implementation("com.epam.drill:transport:$drillTransportLibVerison")
-                    implementation("com.epam.drill.interceptor:http:$drillHttpInterceptorVersion")
-                    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollection")
-                    implementation("com.benasher44:uuid:$uuidVersion")
-                    implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
-                    implementation("com.epam.drill:common:$drillApiVersion")
-                    implementation("com.epam.drill.logger:logger:$drillLoggerVersion")
-                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
-                        version { strictly("$coroutinesVersion-native-mt") }
-                    }
+        val commonNative by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$serializationRuntimeVersion")
+                implementation("com.benasher44:uuid:$uuidVersion")
+                implementation("com.epam.drill:transport:$drillTransportLibVerison")
+                implementation("com.epam.drill.interceptor:http:$drillHttpInterceptorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollection")
+                implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
+                implementation("com.epam.drill:common:$drillApiVersion")
+                implementation("com.epam.drill.logger:logger:$drillLoggerVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
+                    version { strictly("$coroutinesVersion-native-mt") }
                 }
             }
         }
-        posix {
-            defaultSourceSet {
-                dependsOn(sourceSets.named("commonMain").get())
-            }
+
+        val posixNative by creating {
+            dependsOn(commonNative)
+        }
+
+        val linuxX64Main by getting {
+            dependsOn(posixNative)
+        }
+        val mingwX64Main by getting {
+            dependsOn(commonNative)
+        }
+        val macosX64Main by getting {
+            dependsOn(posixNative)
         }
     }
-
-    setOf(
-        mingwX64 { binaries.all { linkerOpts("-lpsapi", "-lwsock32", "-lws2_32", "-lmswsock") } },
-        macosX64(),
-        linuxX64()
-    ).forEach {
-        it.compilations["main"].addCInterop()
-    }
-    jvm {
-        val main by compilations
-        main.defaultSourceSet {
-            dependencies {
-                compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationRuntimeVersion")
-            }
-        }
-    }
-
 }
 
 tasks.withType<KotlinNativeCompile> {
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlin.time.ExperimentalTime"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.InternalSerializationApi"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi"
-    kotlinOptions.freeCompilerArgs += "-Xuse-experimental=io.ktor.util.InternalAPI"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.ExperimentalUnsignedTypes"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.time.ExperimentalTime"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.serialization.InternalSerializationApi"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.serialization.ExperimentalSerializationApi"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=io.ktor.util.InternalAPI"
 }
 
 
