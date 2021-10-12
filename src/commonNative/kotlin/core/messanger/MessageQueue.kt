@@ -16,6 +16,7 @@
 package com.epam.drill.core.messanger
 
 import com.epam.drill.common.*
+import com.epam.drill.common.serialization.*
 import com.epam.drill.core.ws.*
 import com.epam.drill.plugin.api.message.*
 import kotlinx.cinterop.*
