@@ -13,6 +13,8 @@ val scriptUrl: String by extra
 
 val serializationRuntimeVersion: String by extra
 val coroutinesVersion: String by extra
+val uuidVersion: String by extra
+
 val drillHttpInterceptorVersion: String by extra
 val drillApiVersion: String by extra
 val drillLoggerVersion: String by extra
@@ -55,6 +57,7 @@ kotlin {
                     implementation("com.epam.drill:transport:$drillTransportLibVerison")
                     implementation("com.epam.drill.interceptor:http:$drillHttpInterceptorVersion")
                     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:$kxCollection")
+                    implementation("com.benasher44:uuid:$uuidVersion")
                     implementation("com.epam.drill:drill-agent-part:$drillApiVersion")
                     implementation("com.epam.drill:common:$drillApiVersion")
                     implementation("com.epam.drill.logger:logger:$drillLoggerVersion")

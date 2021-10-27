@@ -15,6 +15,7 @@
  */
 package com.epam.drill.core.ws
 
+import com.benasher44.uuid.*
 import com.epam.drill.*
 import com.epam.drill.common.*
 import com.epam.drill.logger.*
@@ -39,6 +40,7 @@ class WsSocket : CoroutineScope {
     override val coroutineContext: CoroutineContext = dispatcher
 
     private val errorMessage = atomic("")
+    private val isInstanceIdGenerated = atomic(false)
 
     init {
         topicRegister()
@@ -56,7 +58,14 @@ class WsSocket : CoroutineScope {
         val wsClient = WSClientFactory.createClient(url)
         ws.value = wsClient
         wsClient.onOpen {
-            wsLogger.info { "Agent connected" }
+            if (agentConfig.instanceId.isEmpty()) {
+                isInstanceIdGenerated.update { true }
+                wsLogger.debug { "InstanceId will be generated on each WS connection" }
+            }
+            if (isInstanceIdGenerated.value) {
+                agentConfig = agentConfig.copy(instanceId = uuid4().toString())
+            }
+            wsLogger.info { "Agent connected with instanceId '${agentConfig.instanceId}'" }
             errorMessage.update { "" }
         }
 
