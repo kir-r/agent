@@ -48,6 +48,11 @@ class WsSocket : CoroutineScope {
 
     fun connect(adminUrl: String) {
         val url = URL("$adminUrl/agent/attach")
+        if (agentConfig.instanceId.isEmpty()) {
+            isInstanceIdGenerated.update { true }
+            wsLogger.debug { "InstanceId will be generated on each WS connection" }
+        }
+        checkAndGenerateInstanceId()
         headers = {
             mutableMapOf(
                 AgentConfigParam to ProtoBuf.encodeToHexString(AgentConfig.serializer(), agentConfig),
@@ -55,16 +60,10 @@ class WsSocket : CoroutineScope {
                 HttpHeaders.ContentEncoding to "deflate"
             )
         }
+        wsLogger.info { "connecting with instanceId '${agentConfig.instanceId}'..." }
         val wsClient = WSClientFactory.createClient(url)
         ws.value = wsClient
         wsClient.onOpen {
-            if (agentConfig.instanceId.isEmpty()) {
-                isInstanceIdGenerated.update { true }
-                wsLogger.debug { "InstanceId will be generated on each WS connection" }
-            }
-            if (isInstanceIdGenerated.value) {
-                agentConfig = agentConfig.copy(instanceId = uuid4().toString())
-            }
             wsLogger.info { "Agent connected with instanceId '${agentConfig.instanceId}'" }
             errorMessage.update { "" }
         }
@@ -118,12 +117,18 @@ class WsSocket : CoroutineScope {
             }
         }
         wsClient.onClose {
-            wsLogger.info { "Websocket closed" }
+            checkAndGenerateInstanceId()
+            wsLogger.info { "Websocket closed. On next connection instanceId will be '${agentConfig.instanceId}'" }
             errorMessage.update { "" }
         }
 
     }
 
+    private fun checkAndGenerateInstanceId() {
+        if (isInstanceIdGenerated.value) {
+            agentConfig = agentConfig.copy(instanceId = uuid4().toString())
+        }
+    }
 
 }
 
