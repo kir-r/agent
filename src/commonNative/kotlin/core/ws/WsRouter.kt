@@ -25,6 +25,7 @@ import com.epam.drill.logger.*
 import com.epam.drill.logger.api.*
 import com.epam.drill.plugin.*
 import com.epam.drill.plugin.api.processing.*
+import io.ktor.util.*
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
 import kotlin.native.concurrent.*
@@ -154,6 +155,7 @@ fun topicRegister() =
             tempTopicLogger.debug { "actionPlugin event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
             agentPluginPart?.doRawAction(m.message)
+            Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/plugin/action/${m.message.encodeBase64()}"))
         }
 
         rawTopic<TogglePayload>("/plugin/togglePlugin") { (pluginId, forceValue) ->
