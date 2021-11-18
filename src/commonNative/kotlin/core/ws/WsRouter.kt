@@ -72,6 +72,14 @@ fun topicRegister() =
 
         }
 
+        rawTopic("/plugin/state") {
+            tempTopicLogger.info { "Agent's plugin state sending triggered " }
+            tempTopicLogger.info { "Plugins: ${pstorage.size}" }
+            pstorage.onEach { (_, plugin) ->
+                plugin.onConnect()
+            }
+        }
+
         rawTopic<LoggingConfig>("/agent/logging/update-config") { lc ->
             tempTopicLogger.info { "Agent got a logging config: $lc" }
             Logging.logLevel = when {
