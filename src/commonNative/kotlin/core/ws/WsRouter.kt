@@ -163,7 +163,7 @@ fun topicRegister() =
             tempTopicLogger.debug { "actionPlugin event: message is ${m.message} " }
             val agentPluginPart = PluginManager[m.id]
             agentPluginPart?.doRawAction(m.message)
-            Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/plugin/action/${m.message.encodeBase64()}"))
+            Sender.send(Message(MessageType.MESSAGE_DELIVERED, "/plugin/action/${m.confirmationKey}"))
         }
 
         rawTopic<TogglePayload>("/plugin/togglePlugin") { (pluginId, forceValue) ->
